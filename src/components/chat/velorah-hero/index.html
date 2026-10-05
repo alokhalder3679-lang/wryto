@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var _fetch = window.fetch;
+          Object.defineProperty(window, "fetch", {
+            get: function () {
+              return _fetch;
+            },
+            set: function (newFetch) {
+              _fetch = newFetch;
+            },
+            configurable: true,
+            enumerable: true,
+          });
+        } catch (e) {}
+
+        try {
+          if (typeof Window !== "undefined" && Window.prototype) {
+            var desc = Object.getOwnPropertyDescriptor(Window.prototype, "fetch");
+            if (desc && !desc.set) {
+              var _protoFetch = desc.get ? desc.get.call(window) : window.fetch;
+              Object.defineProperty(Window.prototype, "fetch", {
+                get: function () {
+                  return _protoFetch;
+                },
+                set: function (newFetch) {
+                  _protoFetch = newFetch;
+                },
+                configurable: true,
+                enumerable: true,
+              });
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <title>Wryto — A quiet place for words that matter.</title>
+    <meta
+      name="description"
+      content="A quiet place for words that matter — cinematic digital spaces for sharp focus and inspired writing."
+    />
+    <meta property="og:title" content="Wryto — A quiet place for words that matter." />
+    <meta
+      property="og:description"
+      content="A quiet place for words that matter — cinematic digital spaces for sharp focus and inspired writing."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    class="bg-[#002242] text-white antialiased overflow-x-hidden selection:bg-white/20 selection:text-white"
+  >
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

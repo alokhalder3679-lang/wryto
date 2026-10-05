@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="104" fill="#152438"/>
+  <g transform="translate(14, 10)">
+    <!-- Feather Quill -->
+    <!-- Quill Shaft / Stem -->
+    <path d="M125 435 L200 330" stroke="#4bbfa8" stroke-width="12" stroke-linecap="round" />
+    <path d="M165 380 L180 360" stroke="#e76a60" stroke-width="12" stroke-linecap="round" />
+    <circle cx="123" cy="438" r="6" fill="#152438"/>
+
+    <!-- Spine -->
+    <path d="M195 335 C240 270 300 200 375 125" stroke="#101926" stroke-width="11" stroke-linecap="round"/>
+
+    <!-- Turquoise / Mint Bottom Vanes -->
+    <path d="M190 330 C165 305 160 270 170 250 C185 285 205 305 230 315 Z" fill="#4bbfa8"/>
+    <path d="M185 330 C205 340 240 335 250 310 C235 305 215 315 195 330 Z" fill="#52baa9"/>
+
+    <!-- Salmon / Coral Pink Main Vanes (Left side) -->
+    <path d="M230 280 C195 245 190 205 205 185 C220 220 245 245 270 255 Z" fill="#e76a60"/>
+    <path d="M265 240 C235 205 230 170 245 150 C260 180 285 205 305 215 Z" fill="#e76a60"/>
+    <path d="M300 200 C275 165 275 135 290 120 C305 145 325 165 345 175 Z" fill="#e76a60"/>
+
+    <!-- Salmon / Coral Pink Main Vanes (Right side / Upper Tip) -->
+    <path d="M255 295 C285 300 325 285 340 260 C315 260 285 275 255 295 Z" fill="#e76a60"/>
+    <path d="M290 255 C320 255 360 235 375 210 C350 215 320 235 290 255 Z" fill="#e76a60"/>
+    <path d="M325 215 C355 210 395 185 410 155 C385 165 355 190 325 215 Z" fill="#e76a60"/>
+
+    <!-- Tip Vane -->
+    <path d="M360 170 C385 155 425 115 420 85 C395 115 365 145 345 155 Z" fill="#e76a60"/>
+  </g>
+</svg>

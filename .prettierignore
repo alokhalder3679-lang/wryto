@@ -1,0 +1,10 @@
+dist
+node_modules
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.mp4
+*.ico
+*.pdf
+src/components/chat/velorah-hero
