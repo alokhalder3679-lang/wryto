@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MapPin, MessageCircle, MoreHorizontal, UserX } from "lucide-react";
+import { LogOut, MapPin, MessageCircle, MoreHorizontal, Settings, UserX } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { FollowButton, PostCard } from "@/components/post-card";
@@ -16,7 +16,9 @@ import { BlockModal } from "@/components/block-modal";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { toWriter, type Writer } from "@/lib/inkline-data";
+import { initialsOf, toWriter, type Writer } from "@/lib/inkline-data";
+import { getAvatarUrl } from "@/lib/avatar";
+import { toast } from "sonner";
 import { useInkline } from "@/lib/inkline-context";
 import { useSettings } from "@/lib/user-settings";
 import { cn } from "@/lib/utils";
@@ -84,7 +86,7 @@ export const Route = createFileRoute("/profile/$handle")({
 
 function ProfilePage() {
   const { handle } = Route.useParams();
-  const { posts, profile: me, refresh } = useInkline();
+  const { posts, profile: me, signOut, refresh } = useInkline();
   const { t } = useSettings();
   const [tab, setTab] = useState("Pieces");
   const [writer, setWriter] = useState<Writer | null>(null);
@@ -100,7 +102,9 @@ function ProfilePage() {
   const [form, setForm] = useState({ handle: "", display_name: "", bio: "", location: "" });
   const [formError, setFormError] = useState<string | null>(null);
   const [list, setList] = useState<null | "followers" | "following">(null);
-  const [people, setPeople] = useState<{ handle: string; display_name: string }[]>([]);
+  const [people, setPeople] = useState<
+    { handle: string; display_name: string; avatar_url?: string | null }[]
+  >([]);
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -151,12 +155,9 @@ function ProfilePage() {
       setMutual(null);
       setFollowsYou(false);
     }
-    if (found.avatarUrl) {
-      const signed = await supabase.storage.from("avatars").createSignedUrl(found.avatarUrl, 3600);
-      setAvatarUrl(signed.data?.signedUrl ?? null);
-    } else setAvatarUrl(null);
+    setAvatarUrl(getAvatarUrl(found.avatarUrl));
     setLoading(false);
-  }, [handle]);
+  }, [handle, me]);
 
   useEffect(() => {
     setLoading(true);
@@ -226,11 +227,11 @@ function ProfilePage() {
       kind === "followers"
         ? supabase
             .from("followers")
-            .select("p:profiles!followers_follower_id_fkey(handle, display_name)")
+            .select("p:profiles!followers_follower_id_fkey(handle, display_name, avatar_url)")
             .eq("following_id", writer.id)
         : supabase
             .from("followers")
-            .select("p:profiles!followers_following_id_fkey(handle, display_name)")
+            .select("p:profiles!followers_following_id_fkey(handle, display_name, avatar_url)")
             .eq("follower_id", writer.id);
     const { data, error } = await q.order("created_at", { ascending: false }).limit(200);
     if (error) {
@@ -239,25 +240,56 @@ function ProfilePage() {
     }
     setListState("ok");
     setPeople(
-      ((data ?? []) as unknown as { p: { handle: string; display_name: string } | null }[]).flatMap(
-        (r) => (r.p ? [r.p] : []),
-      ),
+      (
+        (data ?? []) as unknown as {
+          p: { handle: string; display_name: string; avatar_url: string | null } | null;
+        }[]
+      ).flatMap((r) => (r.p ? [r.p] : [])),
     );
   }
 
   async function uploadAvatar(file: File) {
     if (!writer) return;
     setBusy(true);
-    const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const path = `${writer.id}/avatar.${extension}`;
-    const { error } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true, contentType: file.type });
-    if (!error) {
-      await supabase.from("profiles").update({ avatar_url: path }).eq("id", writer.id);
-      await Promise.all([load(), refresh()]);
+    try {
+      const ext =
+        { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" }[
+          file.type
+        ] ||
+        file.name.split(".").pop()?.toLowerCase() ||
+        "jpg";
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be under 5 MB.");
+        setBusy(false);
+        return;
+      }
+      const path = `${writer.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) {
+        toast.error(`Upload failed: ${uploadError.message}`);
+        setBusy(false);
+        return;
+      }
+      const { data: pubData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const avatarUrlWithTime = `${pubData.publicUrl}?t=${Date.now()}`;
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: avatarUrlWithTime })
+        .eq("id", writer.id);
+      if (updateError) {
+        toast.error("Couldn't save profile photo in database.");
+      } else {
+        toast.success("Profile photo updated!");
+        setAvatarUrl(avatarUrlWithTime);
+        await Promise.all([load(), refresh()]);
+      }
+    } catch {
+      toast.error("An unexpected error occurred during photo upload.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   if (loading)
@@ -312,7 +344,9 @@ function ProfilePage() {
       <section className={cn(section, "text-center sm:text-left")}>
         <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
           <Avatar className="size-24 shrink-0 shadow-[var(--glass-shadow)] ring-4 ring-[var(--glass-border)]">
-            {avatarUrl && <AvatarImage src={avatarUrl} alt={writer.name} />}
+            {avatarUrl && (
+              <AvatarImage src={avatarUrl} alt={writer.name} className="object-cover" />
+            )}
             <AvatarFallback className="bg-accent text-2xl font-bold text-accent-foreground">
               {writer.initials}
             </AvatarFallback>
@@ -411,9 +445,29 @@ function ProfilePage() {
           </div>
           <div className="shrink-0 flex items-center gap-2">
             {isMe ? (
-              <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
-                {editing ? t("cancel") : "Edit profile"}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
+                  {editing ? t("cancel") : "Edit profile"}
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/settings" className="gap-1.5">
+                    <Settings className="size-3.5" />
+                    <span>Settings</span>
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive gap-1.5"
+                  onClick={async () => {
+                    await signOut();
+                    await navigate({ to: "/auth", replace: true });
+                  }}
+                >
+                  <LogOut className="size-3.5" />
+                  <span>Sign out</span>
+                </Button>
+              </div>
             ) : (
               <>
                 <FollowButton handle={writer.handle} />
@@ -546,10 +600,24 @@ function ProfilePage() {
                     to="/profile/$handle"
                     params={{ handle: p.handle }}
                     onClick={() => setList(null)}
-                    className="block rounded-lg px-3 py-2 hover:bg-muted"
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted"
                   >
-                    <span className="font-semibold">{p.display_name}</span>{" "}
-                    <span className="text-sm text-muted-foreground">@{p.handle}</span>
+                    <Avatar className="size-9 shrink-0">
+                      {getAvatarUrl(p.avatar_url) && (
+                        <AvatarImage
+                          src={getAvatarUrl(p.avatar_url)!}
+                          alt={p.display_name}
+                          className="object-cover"
+                        />
+                      )}
+                      <AvatarFallback className="bg-accent text-xs font-semibold">
+                        {initialsOf(p.display_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{p.display_name}</p>
+                      <p className="truncate text-xs text-muted-foreground">@{p.handle}</p>
+                    </div>
                   </Link>
                 </li>
               ))}

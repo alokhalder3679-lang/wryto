@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAvatarUrl } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -129,6 +129,13 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
     >
       <div className="flex items-start gap-3">
         <Avatar className="size-10">
+          {getAvatarUrl(post.author.avatarUrl) && (
+            <AvatarImage
+              src={getAvatarUrl(post.author.avatarUrl)!}
+              alt={post.author.name}
+              className="object-cover"
+            />
+          )}
           <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">
             {post.author.initials}
           </AvatarFallback>

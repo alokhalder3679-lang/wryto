@@ -146,7 +146,7 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
   }
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="flex h-full flex-col bg-background min-w-0 w-full overflow-hidden">
       {/* ── Header ── */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border/60 px-4">
         {onBack && (
@@ -237,7 +237,7 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
       )}
 
       {/* ── Messages or Empty Chat State ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-3 sm:py-4 space-y-2 min-w-0 w-full">
         {msgs.length === 0 ? (
           /* Empty Chat State */
           <div className="flex flex-col items-center justify-center p-8 text-center my-auto min-h-[300px]">
@@ -306,7 +306,7 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
       {/* ── Input Bar / Access Control State ── */}
       {canChat ? (
         /* Allowed: Active input box */
-        <div className="flex shrink-0 items-end gap-2 border-t border-border/60 bg-background px-3 py-3">
+        <div className="flex shrink-0 items-end gap-1.5 sm:gap-2 border-t border-border/60 bg-background p-2 sm:p-3 min-w-0 w-full box-border">
           <Button
             variant="ghost"
             size="icon"
@@ -320,16 +320,17 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
           <textarea
             ref={inputRef}
             rows={1}
+            cols={1}
             value={draft}
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message…"
             className={cn(
-              "flex-1 resize-none rounded-2xl border border-border bg-muted/50 px-4 py-2.5 text-sm",
+              "min-w-0 flex-1 resize-none rounded-2xl border border-border bg-muted/50 px-3.5 py-2 text-sm",
               "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40",
               "max-h-32 overflow-y-auto transition-all",
             )}
-            style={{ height: "auto", minHeight: "40px" }}
+            style={{ height: "auto", minHeight: "38px" }}
             onInput={(e) => {
               const el = e.currentTarget;
               el.style.height = "auto";

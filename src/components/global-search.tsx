@@ -3,8 +3,9 @@ import { Search, Loader2, User, BookOpen, X, ArrowRight } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/lib/user-settings";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsOf } from "@/lib/inkline-data";
+import { getAvatarUrl } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 
 interface WriterResult {
@@ -12,6 +13,7 @@ interface WriterResult {
   handle: string;
   display_name: string;
   bio: string | null;
+  avatar_url?: string | null;
 }
 
 interface PostResult {
@@ -59,7 +61,7 @@ export function GlobalSearch({
         const [writersRes, postsRes] = await Promise.all([
           supabase
             .from("profiles")
-            .select("id, handle, display_name, bio")
+            .select("id, handle, display_name, bio, avatar_url")
             .or(`handle.ilike.%${trimmed}%,display_name.ilike.%${trimmed}%,bio.ilike.%${trimmed}%`)
             .limit(4),
           supabase
@@ -203,6 +205,13 @@ export function GlobalSearch({
                       className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-accent/70"
                     >
                       <Avatar className="size-9 shrink-0">
+                        {getAvatarUrl(w.avatar_url) && (
+                          <AvatarImage
+                            src={getAvatarUrl(w.avatar_url)!}
+                            alt={w.display_name}
+                            className="object-cover"
+                          />
+                        )}
                         <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                           {initialsOf(w.display_name)}
                         </AvatarFallback>

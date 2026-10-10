@@ -71,13 +71,21 @@ function MessagesPage() {
   }
 
   return (
-    <AppShell title="Messages">
+    <AppShell title="Messages" hideBottomNav={mobileView === "chat"}>
       {/* Call modals sit above everything */}
       <CallModals />
       <ChatNotificationToast />
 
       {/* ── Two-panel layout ── */}
-      <div className="flex h-[calc(100vh-5rem)] overflow-hidden rounded-2xl border border-border/60 mx-4 mt-4 lg:mx-6">
+      <div
+        className={cn(
+          "flex overflow-hidden border border-border/60 min-w-0 w-full",
+          mobileView === "chat"
+            ? "h-[calc(100dvh-4rem)] rounded-none border-x-0 border-b-0 mx-0 mt-0"
+            : "h-[calc(100dvh-5rem)] rounded-2xl mx-3 sm:mx-4 mt-3 sm:mt-4 lg:mx-6",
+          "lg:h-[calc(100vh-5rem)] lg:rounded-2xl lg:border lg:mx-6 lg:mt-4",
+        )}
+      >
         {/* Left: Conversation list */}
         <aside
           className={cn(
@@ -141,7 +149,7 @@ function MessagesPage() {
         {/* Right: Chat window */}
         <main
           className={cn(
-            "flex-1 bg-background",
+            "flex-1 min-w-0 bg-background overflow-hidden",
             // Mobile: hide list when chat is open
             mobileView === "list" ? "hidden lg:flex lg:flex-col" : "flex flex-col",
           )}

@@ -77,22 +77,27 @@ Wryto is a modern, text-first publishing and social platform designed for writer
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/alokhalder3679-lang/wryto.git
    cd wryto
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 3. **Configure Environment Variables:**
    Copy the example environment file and configure your Supabase credentials:
+
    ```bash
    cp .env.example .env
    ```
+
    Open `.env` and fill in your Supabase project URL and anon public key:
+
    ```env
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-key

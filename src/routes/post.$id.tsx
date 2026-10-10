@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Send } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { PostCard } from "@/components/post-card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAvatarUrl } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -220,7 +220,14 @@ function PostDetail() {
         <div className="mt-7 space-y-7">
           {comments.map((comment) => (
             <div key={comment.id} className="flex gap-3">
-              <Avatar className="size-9">
+              <Avatar className="size-9 shrink-0">
+                {getAvatarUrl(comment.author.avatarUrl) && (
+                  <AvatarImage
+                    src={getAvatarUrl(comment.author.avatarUrl)!}
+                    alt={comment.author.name}
+                    className="object-cover"
+                  />
+                )}
                 <AvatarFallback className="bg-muted text-xs">
                   {comment.author.initials}
                 </AvatarFallback>

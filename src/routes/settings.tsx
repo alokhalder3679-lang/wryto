@@ -39,6 +39,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAvatarUrl } from "@/lib/avatar";
+import { initialsOf } from "@/lib/inkline-data";
 import { supabase } from "@/integrations/supabase/client";
 import { useInkline } from "@/lib/inkline-context";
 import { useSettings, type Settings } from "@/lib/user-settings";
@@ -99,7 +102,7 @@ function Section({
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-11 items-center justify-between gap-4">
+    <div className="flex min-h-11 flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 py-1">
       <div className="min-w-0">
         <p className="text-sm font-medium">{label}</p>
         {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -277,25 +280,37 @@ function SettingsPage() {
 
   const uploadPhoto = (file: File) =>
     run("photo", async () => {
-      const ext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }[file.type];
+      const ext =
+        { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" }[
+          file.type
+        ] || file.name.split(".").pop()?.toLowerCase();
       if (!ext) {
-        toast.error("Use a JPG, PNG or WebP image.");
+        toast.error("Use a JPG, PNG, WebP, or GIF image.");
         return;
       }
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error("Image must be under 2 MB.");
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be under 5 MB.");
         return;
       }
       const path = `${user.id}/avatar.${ext}`;
-      const { error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(path, file, { upsert: true, contentType: file.type });
-      if (error) {
-        toast.error("Upload failed.");
+      if (uploadError) {
+        toast.error(`Upload failed: ${uploadError.message}`);
         return;
       }
-      await supabase.from("profiles").update({ avatar_url: path }).eq("id", user.id);
-      toast.success("Photo updated.");
+      const { data: pubData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const avatarUrlWithTime = `${pubData.publicUrl}?t=${Date.now()}`;
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: avatarUrlWithTime })
+        .eq("id", user.id);
+      if (updateError) {
+        toast.error("Couldn't save profile photo.");
+        return;
+      }
+      toast.success("Photo updated successfully.");
       await refresh();
     });
 
@@ -544,20 +559,34 @@ function SettingsPage() {
 
         <Section id="profile" icon={UserRound} title={t("profileSettings")}>
           <Row label={t("photo")}>
-            <Button
-              variant="outline"
-              className="h-11"
-              onClick={() => fileRef.current?.click()}
-              disabled={busy === "photo"}
-            >
-              {busy === "photo" && <Loader2 className="animate-spin" />}
-              {t("changePhoto")}
-            </Button>
+            <div className="flex items-center gap-4">
+              <Avatar className="size-14 ring-2 ring-border shadow-sm">
+                {getAvatarUrl(profile?.avatarUrl) && (
+                  <AvatarImage
+                    src={getAvatarUrl(profile?.avatarUrl)!}
+                    alt={profile?.name ?? "Avatar"}
+                    className="object-cover"
+                  />
+                )}
+                <AvatarFallback className="bg-accent text-base font-bold text-accent-foreground">
+                  {profile?.name ? initialsOf(profile.name) : "WR"}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                variant="outline"
+                className="h-10 text-xs sm:text-sm font-medium"
+                onClick={() => fileRef.current?.click()}
+                disabled={busy === "photo"}
+              >
+                {busy === "photo" && <Loader2 className="animate-spin mr-1.5 size-4" />}
+                {t("changePhoto")}
+              </Button>
+            </div>
           </Row>
           <input
             ref={fileRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];

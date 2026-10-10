@@ -1,6 +1,7 @@
-// ─── Conversation List (left panel) ───────────────────────────
 import { cn } from "@/lib/utils";
 import { type Conversation, chatRelativeTime } from "@/lib/chat-context";
+import { getAvatarUrl } from "@/lib/avatar";
+import { useState } from "react";
 
 type Props = {
   conversations: Conversation[];
@@ -19,7 +20,9 @@ export function Avatar({
   online: boolean;
   size?: "sm" | "md" | "lg";
 }) {
+  const [imgError, setImgError] = useState(false);
   const sz = size === "sm" ? "size-9" : size === "lg" ? "size-20" : "size-12";
+  const avatarSrc = getAvatarUrl(avatar);
   const initials = name
     .split(" ")
     .map((w) => w[0])
@@ -28,8 +31,13 @@ export function Avatar({
     .toUpperCase();
   return (
     <span className={cn("relative shrink-0 rounded-full", sz)}>
-      {avatar ? (
-        <img src={avatar} alt={name} className={cn("rounded-full object-cover", sz)} />
+      {avatarSrc && !imgError ? (
+        <img
+          src={avatarSrc}
+          alt={name}
+          className={cn("rounded-full object-cover", sz)}
+          onError={() => setImgError(true)}
+        />
       ) : (
         <span
           className={cn(

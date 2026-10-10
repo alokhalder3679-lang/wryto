@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FollowButton } from "@/components/post-card";
 import { supabase } from "@/integrations/supabase/client";
 import { initialsOf } from "@/lib/inkline-data";
+import { getAvatarUrl } from "@/lib/avatar";
 import { useInkline } from "@/lib/inkline-context";
 
 type Preview = {
@@ -13,6 +14,7 @@ type Preview = {
   handle: string;
   display_name: string;
   bio: string | null;
+  avatar_url: string | null;
   followers_count: number;
   following_count: number;
 };
@@ -52,7 +54,7 @@ export function ProfilePreview({ handle, children }: { handle: string; children:
     setError(false);
     const { data: row, error: err } = await supabase
       .from("profiles")
-      .select("id, handle, display_name, bio, followers_count, following_count")
+      .select("id, handle, display_name, bio, avatar_url, followers_count, following_count")
       .eq("handle", handle)
       .maybeSingle();
     if (err || !row) {
@@ -100,6 +102,13 @@ export function ProfilePreview({ handle, children }: { handle: string; children:
                 className="flex min-w-0 gap-3"
               >
                 <Avatar className="size-11">
+                  {getAvatarUrl(data.avatar_url) && (
+                    <AvatarImage
+                      src={getAvatarUrl(data.avatar_url)!}
+                      alt={data.display_name}
+                      className="object-cover"
+                    />
+                  )}
                   <AvatarFallback className="bg-accent text-xs font-semibold">
                     {initialsOf(data.display_name)}
                   </AvatarFallback>

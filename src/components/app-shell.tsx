@@ -3,6 +3,7 @@ import {
   Bell,
   Compass,
   Home,
+  LogOut,
   MessageCircle,
   Moon,
   PenLine,
@@ -16,6 +17,16 @@ import { WrytoLogo } from "@/components/wryto-logo";
 import { GlobalSearch } from "@/components/global-search";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { LanguageToggle } from "@/components/language-toggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAvatarUrl } from "@/lib/avatar";
+import { initialsOf } from "@/lib/inkline-data";
 import { useInkline } from "@/lib/inkline-context";
 import { useSettings } from "@/lib/user-settings";
 import type { TKey } from "@/lib/i18n";
@@ -37,11 +48,11 @@ function NavigationLinks({
   const classes = (active: boolean) =>
     cn(
       mobile
-        ? "flex flex-col items-center justify-center gap-1 text-[11px] font-medium"
+        ? "flex flex-col items-center justify-center gap-1 text-[10px] font-medium py-1"
         : "flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
       active
         ? mobile
-          ? "text-primary"
+          ? "text-primary font-semibold"
           : "bg-accent text-accent-foreground"
         : mobile
           ? "text-muted-foreground"
@@ -50,10 +61,10 @@ function NavigationLinks({
   const icon = (Icon: typeof Home, label: string, active: boolean, badge = 0) => (
     <>
       <span className="relative">
-        <Icon className="size-5" strokeWidth={active ? 2.2 : 1.8} />
+        <Icon className={cn("size-5", mobile && "size-4.5")} strokeWidth={active ? 2.2 : 1.8} />
         {badge > 0 && <span className="absolute -right-1 -top-1 size-2 rounded-full bg-primary" />}
       </span>
-      <span className="truncate">{label}</span>
+      <span className={cn("truncate", mobile && "max-w-[46px]")}>{label}</span>
     </>
   );
   return (
@@ -64,11 +75,11 @@ function NavigationLinks({
       <Link to="/discover" search={{ q: "" }} className={classes(pathname === "/discover")}>
         {icon(Compass, t("discover"), pathname === "/discover")}
       </Link>
-      <Link to="/notifications" className={classes(pathname === "/notifications")}>
-        {icon(Bell, t("notifications"), pathname === "/notifications", unread)}
-      </Link>
       <Link to="/messages" className={classes(pathname === "/messages")}>
         {icon(MessageCircle, t("messages"), pathname === "/messages")}
+      </Link>
+      <Link to="/notifications" className={classes(pathname === "/notifications")}>
+        {icon(Bell, t("notifications"), pathname === "/notifications", unread)}
       </Link>
       {handle ? (
         <Link
@@ -83,11 +94,9 @@ function NavigationLinks({
           {icon(UserRound, t("signIn"), pathname === "/auth")}
         </Link>
       )}
-      {!mobile && (
-        <Link to="/settings" className={classes(pathname === "/settings")}>
-          {icon(SettingsIcon, t("settings"), pathname === "/settings")}
-        </Link>
-      )}
+      <Link to="/settings" className={classes(pathname === "/settings")}>
+        {icon(SettingsIcon, t("settings"), pathname === "/settings")}
+      </Link>
     </>
   );
 }
@@ -96,10 +105,12 @@ export function AppShell({
   children,
   title,
   action,
+  hideBottomNav = false,
 }: {
   children: ReactNode;
   title?: string;
   action?: ReactNode;
+  hideBottomNav?: boolean;
 }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { profile, user, unreadCount, signOut } = useInkline();
@@ -126,6 +137,76 @@ export function AppShell({
 
   const handle = profile?.handle ?? null;
 
+  const UserMenu = () => {
+    if (!user) {
+      return (
+        <Button asChild variant="outline" size="sm" className="h-8 rounded-full px-3 text-xs">
+          <Link to="/auth">{t("signIn")}</Link>
+        </Button>
+      );
+    }
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="relative size-8 shrink-0 rounded-full ring-2 ring-primary/20 transition-transform active:scale-95 focus:outline-none"
+            aria-label="Account menu"
+          >
+            <Avatar className="size-8">
+              {getAvatarUrl(profile?.avatarUrl) && (
+                <AvatarImage
+                  src={getAvatarUrl(profile?.avatarUrl)!}
+                  alt={profile?.name ?? "User"}
+                  className="object-cover"
+                />
+              )}
+              <AvatarFallback className="bg-accent text-xs font-semibold text-accent-foreground">
+                {profile?.name ? initialsOf(profile.name) : "U"}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="glass w-52 rounded-2xl p-1.5 shadow-xl">
+          <div className="px-3 py-2 border-b border-border/50 mb-1">
+            <p className="text-sm font-bold truncate text-foreground">
+              {profile?.name ?? "Writer"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">@{handle ?? "writer"}</p>
+          </div>
+          {handle && (
+            <DropdownMenuItem asChild>
+              <Link
+                to="/profile/$handle"
+                params={{ handle }}
+                className="gap-2.5 cursor-pointer rounded-xl px-2.5 py-2 text-xs font-medium"
+              >
+                <UserRound className="size-4 text-primary" />
+                <span>{t("profile")}</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem asChild>
+            <Link
+              to="/settings"
+              className="gap-2.5 cursor-pointer rounded-xl px-2.5 py-2 text-xs font-medium"
+            >
+              <SettingsIcon className="size-4 text-primary" />
+              <span>{t("settings")}</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="my-1" />
+          <DropdownMenuItem
+            onClick={() => void handleSignOut()}
+            className="gap-2.5 text-destructive cursor-pointer rounded-xl px-2.5 py-2 text-xs font-medium focus:text-destructive focus:bg-destructive/10"
+          >
+            <LogOut className="size-4" />
+            <span>{t("signOut")}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
   return (
     <div className="min-h-screen" data-shell={pathname === "/settings" ? "keep" : "read"}>
       <aside className="glass fixed inset-y-4 left-4 z-30 hidden w-72 flex-col rounded-3xl px-6 py-7 lg:flex">
@@ -133,18 +214,18 @@ export function AppShell({
           <WrytoLogo variant="full" size="md" className="h-10" />
         </Link>
         <div className="mt-7 flex flex-col items-center text-center">
-          <div className="grid size-20 place-items-center rounded-full bg-accent text-xl font-bold text-accent-foreground shadow-[var(--glass-shadow)] ring-4 ring-[var(--glass-border)]">
-            {profile ? (
-              profile.name
-                .split(/\s+/)
-                .map((p) => p[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase()
-            ) : (
-              <UserRound className="size-8" />
+          <Avatar className="size-20 shadow-[var(--glass-shadow)] ring-4 ring-[var(--glass-border)]">
+            {getAvatarUrl(profile?.avatarUrl) && (
+              <AvatarImage
+                src={getAvatarUrl(profile?.avatarUrl)!}
+                alt={profile?.name ?? "User"}
+                className="object-cover"
+              />
             )}
-          </div>
+            <AvatarFallback className="bg-accent text-xl font-bold text-accent-foreground">
+              {profile ? initialsOf(profile.name) : <UserRound className="size-8" />}
+            </AvatarFallback>
+          </Avatar>
           <p className="mt-4 w-full truncate text-xl font-bold">
             {profile?.name ?? "Guest reader"}
           </p>
@@ -224,6 +305,7 @@ export function AppShell({
                 >
                   {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
                 </Button>
+                <UserMenu />
               </div>
             </div>
             <GlobalSearch mobile />
@@ -246,17 +328,22 @@ export function AppShell({
               <NotificationsPopover />
               <LanguageToggle variant="compact" className="hidden sm:inline-flex" />
               {action}
+              <div className="lg:hidden">
+                <UserMenu />
+              </div>
             </div>
           </header>
         )}
         {children}
       </div>
 
-      <nav className="glass fixed inset-x-3 bottom-3 z-30 grid h-16 grid-cols-5 rounded-2xl px-2 lg:hidden">
-        <NavigationLinks pathname={pathname} handle={handle} unread={unreadCount} mobile t={t} />
-      </nav>
+      {!hideBottomNav && (
+        <nav className="glass fixed inset-x-2 sm:inset-x-3 bottom-2 sm:bottom-3 z-30 grid h-16 grid-cols-6 rounded-2xl px-1 sm:px-2 lg:hidden shadow-lg">
+          <NavigationLinks pathname={pathname} handle={handle} unread={unreadCount} mobile t={t} />
+        </nav>
+      )}
 
-      {!pathname.startsWith("/create") && (
+      {!pathname.startsWith("/create") && !hideBottomNav && (
         <Button
           asChild
           size="icon"

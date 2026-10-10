@@ -1264,7 +1264,56 @@ ALTER TABLE public.calls REPLICA IDENTITY FULL;
 ALTER TABLE public.user_presence REPLICA IDENTITY FULL;
 
 -- -----------------------------------------------------------------------------
--- 18. INITIAL PROFILE BACKFILL & SYNCHRONIZATION
+-- 18. STORAGE CONFIGURATION: PUBLIC AVATARS BUCKET & POLICIES
+-- -----------------------------------------------------------------------------
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'avatars',
+  'avatars',
+  true,
+  5242880,
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = 5242880,
+  allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+DROP POLICY IF EXISTS "Avatars are publicly accessible" ON storage.objects;
+DROP POLICY IF EXISTS "Public Access for Avatars" ON storage.objects;
+CREATE POLICY "Public Access for Avatars"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+CREATE POLICY "Users can upload their own avatar"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'avatars'
+    AND auth.role() = 'authenticated'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+CREATE POLICY "Users can update their own avatar"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'avatars'
+    AND auth.role() = 'authenticated'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
+CREATE POLICY "Users can delete their own avatar"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'avatars'
+    AND auth.role() = 'authenticated'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- -----------------------------------------------------------------------------
+-- 19. INITIAL PROFILE BACKFILL & SYNCHRONIZATION
 -- -----------------------------------------------------------------------------
 UPDATE public.profiles p
 SET posts_count = (SELECT COUNT(*) FROM public.posts WHERE author_id = p.id),
