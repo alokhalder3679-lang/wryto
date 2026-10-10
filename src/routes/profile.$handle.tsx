@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { initialsOf, toWriter, type Writer } from "@/lib/inkline-data";
-import { getAvatarUrl } from "@/lib/avatar";
+import { compressImageToDataUrl, getAvatarUrl } from "@/lib/avatar";
 import { toast } from "sonner";
 import { useInkline } from "@/lib/inkline-context";
 import { useSettings } from "@/lib/user-settings";
@@ -264,25 +264,43 @@ function ProfilePage() {
         return;
       }
       const path = `${writer.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (uploadError) {
-        toast.error(`Upload failed: ${uploadError.message}`);
-        setBusy(false);
-        return;
+      let finalAvatarUrl: string | null = null;
+
+      // 1. Try Supabase Storage
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (!uploadError) {
+          const { data: pubData } = supabase.storage.from("avatars").getPublicUrl(path);
+          if (pubData?.publicUrl) {
+            finalAvatarUrl = `${pubData.publicUrl}?t=${Date.now()}`;
+          }
+        }
+      } catch (err) {
+        console.warn("Storage upload exception:", err);
       }
-      const { data: pubData } = supabase.storage.from("avatars").getPublicUrl(path);
-      const avatarUrlWithTime = `${pubData.publicUrl}?t=${Date.now()}`;
+
+      // 2. Resilient fallback: compress to compact webp
+      if (!finalAvatarUrl) {
+        finalAvatarUrl = await compressImageToDataUrl(file);
+      }
+
+      // 3. Persist to profiles table (both avatar_url and profile_image)
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ avatar_url: avatarUrlWithTime })
+        .update({
+          avatar_url: finalAvatarUrl,
+          profile_image: finalAvatarUrl,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", writer.id);
+
       if (updateError) {
         toast.error("Couldn't save profile photo in database.");
       } else {
         toast.success("Profile photo updated!");
-        setAvatarUrl(avatarUrlWithTime);
+        setAvatarUrl(finalAvatarUrl);
         await Promise.all([load(), refresh()]);
       }
     } catch {

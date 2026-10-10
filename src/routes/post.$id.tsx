@@ -2,11 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Send } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { PostCard } from "@/components/post-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   POST_SELECT,
   relativeTime,
@@ -19,8 +21,37 @@ import { useInkline } from "@/lib/inkline-context";
 
 const SITE = "https://textbloom-net.lovable.app";
 
+function PostErrorComponent() {
+  return (
+    <AppShell title="Reading">
+      <div className="mx-auto max-w-lg px-6 py-20 text-center">
+        <h2 className="font-display text-2xl font-semibold">Unable to load piece</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This piece could not be loaded or may have been removed.
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
+          <Link
+            to="/feed"
+            className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Back to Feed
+          </Link>
+          <Link
+            to="/discover"
+            search={{ q: "" }}
+            className="inline-flex items-center justify-center rounded-full border border-border px-5 py-2 text-xs font-semibold text-foreground hover:bg-accent"
+          >
+            Explore Writers
+          </Link>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
 export const Route = createFileRoute("/post/$id")({
   staticData: { sitemap: true },
+  errorComponent: PostErrorComponent,
   loader: async ({ params }) => {
     try {
       const { data } = await supabase
@@ -106,33 +137,46 @@ function PostDetail() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [postResult, commentsResult] = await Promise.all([
-      supabase.from("posts").select(POST_SELECT).eq("id", id).maybeSingle(),
-      supabase
-        .from("comments")
-        .select(
-          "id, body, created_at, author:profiles!comments_author_id_fkey(id, handle, display_name, bio, location, avatar_url)",
-        )
-        .eq("post_id", id)
-        .order("created_at", { ascending: true }),
-    ]);
-    setPost(postResult.data ? toPost(postResult.data as never) : null);
-    setComments(
-      ((commentsResult.data ?? []) as never[])
-        .map((row: { id: string; body: string; created_at: string; author: never }) =>
-          row.author
-            ? {
-                id: row.id,
-                body: row.body,
-                createdAt: row.created_at,
-                time: relativeTime(row.created_at),
-                author: toWriter(row.author),
-              }
-            : null,
-        )
-        .filter(Boolean) as Comment[],
-    );
-    setLoading(false);
+    try {
+      const [postResult, commentsResult] = await Promise.all([
+        supabase.from("posts").select(POST_SELECT).eq("id", id).maybeSingle(),
+        supabase
+          .from("comments")
+          .select(
+            "id, body, content, created_at, author:profiles!comments_author_id_fkey(id, handle, display_name, bio, location, avatar_url)",
+          )
+          .eq("post_id", id)
+          .order("created_at", { ascending: true }),
+      ]);
+      setPost(postResult?.data ? toPost(postResult.data as never) : null);
+      setComments(
+        ((commentsResult?.data ?? []) as never[])
+          .map(
+            (row: {
+              id: string;
+              body?: string;
+              content?: string;
+              created_at: string;
+              author: never;
+            }) =>
+              row?.author
+                ? {
+                    id: row.id,
+                    body: row.body || row.content || "",
+                    createdAt: row.created_at,
+                    time: relativeTime(row.created_at),
+                    author: toWriter(row.author),
+                  }
+                : null,
+          )
+          .filter(Boolean) as Comment[],
+      );
+    } catch (err) {
+      console.warn("Failed to load post/comments:", err);
+      setPost(null);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -162,7 +206,15 @@ function PostDetail() {
     if (!text.trim() || !user) return;
     const body = text.trim();
     setText("");
-    await supabase.from("comments").insert({ post_id: id, author_id: user.id, body });
+    const { error } = await supabase.from("comments").insert({
+      post_id: id,
+      author_id: user.id,
+      body,
+      content: body,
+    });
+    if (error) {
+      toast.error("Couldn't add response. Please try again.");
+    }
     await load();
   }
 

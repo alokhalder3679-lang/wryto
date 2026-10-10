@@ -38,7 +38,8 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
 
   const isSelf = myId === conversation.participantId;
   const isMutual = isSelf || (relationship.isFollower && relationship.isFollowing);
-  const canChat = true; // Always allow direct messaging like Instagram / Messenger
+  // Supabase RLS policy requires mutual follows to insert messages. Align UI with RLS to prevent crashes.
+  const canChat = isMutual;
   const canCall = isMutual; // Audio/Video calls require mutual follow
 
   // Fetch relationship whenever participant or myId changes
@@ -167,7 +168,7 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-semibold">{conversation.participantName}</p>
+            <p className="truncate text-sm font-semibold">{conversation.participantName || "Writer"}</p>
             {isMutual && !isSelf ? (
               <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                 Mutual
@@ -249,8 +250,8 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
                 size="lg"
               />
             </div>
-            <p className="text-base font-bold">{conversation.participantName}</p>
-            <p className="text-xs text-muted-foreground">@{conversation.participantHandle}</p>
+            <p className="text-base font-bold">{conversation.participantName || "Writer"}</p>
+            <p className="text-xs text-muted-foreground">@{conversation.participantHandle || "writer"}</p>
 
             {isMutual && !isSelf ? (
               <span className="mt-2 inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
@@ -266,10 +267,10 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
               <p className="text-sm font-semibold">Start conversation</p>
               <p className="text-xs text-muted-foreground">
                 {isMutual
-                  ? `You and @${conversation.participantHandle} follow each other. Send a message or start a call!`
+                  ? `You and @${conversation.participantHandle || "writer"} follow each other. Send a message or start a call!`
                   : relationship.isFollower
-                    ? `@${conversation.participantHandle} follows you. Say hello to begin your conversation.`
-                    : `Send a direct message to @${conversation.participantHandle} to start the chat.`}
+                    ? `@${conversation.participantHandle || "writer"} follows you. Follow them back to start chatting.`
+                    : `Follow @${conversation.participantHandle || "writer"} and have them follow you back to chat.`}
               </p>
             </div>
           </div>

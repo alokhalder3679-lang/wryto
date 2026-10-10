@@ -235,14 +235,42 @@ export function InklineProvider({ children }: { children: ReactNode }) {
       publishPost: async ({ title, body, tags }) => {
         const me = userIdRef.current;
         if (!me) return null;
-        const { data, error } = await supabase
-          .from("posts")
-          .insert({ author_id: me, title: title?.trim() ? title.trim() : null, body, tags })
-          .select("id")
-          .single();
-        if (error) return null;
-        await refresh();
-        return data.id;
+        try {
+          const trimmedTitle = title?.trim() ? title.trim() : null;
+          // Dual-column compatibility: provide both body and content so whichever schema variation exists is satisfied
+          const { data, error } = await supabase
+            .from("posts")
+            .insert({
+              author_id: me,
+              title: trimmedTitle,
+              body,
+              content: body,
+              tags: tags || [],
+            } as any)
+            .select("id")
+            .single();
+
+          if (error) {
+            console.error("publishPost primary error:", error);
+            // Fallback retry without content column if column doesn't exist
+            const retry = await supabase
+              .from("posts")
+              .insert({ author_id: me, title: trimmedTitle, body, tags: tags || [] })
+              .select("id")
+              .single();
+            if (retry.error) {
+              console.error("publishPost retry error:", retry.error);
+              return null;
+            }
+            await refresh();
+            return retry.data.id;
+          }
+          await refresh();
+          return data.id;
+        } catch (err) {
+          console.error("publishPost unexpected exception:", err);
+          return null;
+        }
       },
       refresh,
       signOut: async () => {

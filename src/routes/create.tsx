@@ -19,8 +19,23 @@ export const Route = createFileRoute("/create")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  errorComponent: CreateErrorComponent,
   component: CreatePage,
 });
+
+function CreateErrorComponent() {
+  return (
+    <AppShell title="Write">
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold">Unable to load the editor</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          There was an issue opening the writing studio. Please refresh to try again.
+        </p>
+        <Button onClick={() => window.location.reload()}>Reload Studio</Button>
+      </div>
+    </AppShell>
+  );
+}
 
 function CreatePage() {
   const navigate = useNavigate();

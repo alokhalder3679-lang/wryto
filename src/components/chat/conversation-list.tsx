@@ -15,7 +15,7 @@ export function Avatar({
   online,
   size = "md",
 }: {
-  name: string;
+  name?: string | null;
   avatar: string | null;
   online: boolean;
   size?: "sm" | "md" | "lg";
@@ -23,18 +23,20 @@ export function Avatar({
   const [imgError, setImgError] = useState(false);
   const sz = size === "sm" ? "size-9" : size === "lg" ? "size-20" : "size-12";
   const avatarSrc = getAvatarUrl(avatar);
-  const initials = name
-    .split(" ")
+  const safeName = (name || "Writer").trim() || "Writer";
+  const initials = safeName
+    .split(/\s+/)
     .map((w) => w[0])
+    .filter(Boolean)
     .slice(0, 2)
     .join("")
-    .toUpperCase();
+    .toUpperCase() || "W";
   return (
     <span className={cn("relative shrink-0 rounded-full", sz)}>
       {avatarSrc && !imgError ? (
         <img
           src={avatarSrc}
-          alt={name}
+          alt={safeName}
           className={cn("rounded-full object-cover", sz)}
           onError={() => setImgError(true)}
         />
@@ -72,19 +74,19 @@ export function ConversationList({ conversations, activeId, onSelect }: Props) {
           )}
         >
           <Avatar
-            name={conv.participantName}
+            name={conv.participantName || "Writer"}
             avatar={conv.participantAvatar}
             online={conv.online}
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-sm font-semibold">{conv.participantName}</span>
+              <span className="truncate text-sm font-semibold">{conv.participantName || "Writer"}</span>
               <span className="shrink-0 text-[10px] text-muted-foreground">
                 {chatRelativeTime(conv.lastAt)}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2 mt-0.5">
-              <span className="truncate text-xs text-muted-foreground">{conv.lastMessage}</span>
+              <span className="truncate text-xs text-muted-foreground">{conv.lastMessage || ""}</span>
               {conv.unread > 0 && (
                 <span className="shrink-0 grid min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                   {conv.unread}

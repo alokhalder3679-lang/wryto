@@ -17,6 +17,7 @@ export const Route = createFileRoute("/messages")({
     user: typeof search.user === "string" ? search.user : undefined,
     handle: typeof search.handle === "string" ? search.handle : undefined,
   }),
+  errorComponent: MessagesErrorComponent,
   component: MessagesPage,
 });
 
@@ -37,16 +38,24 @@ function MessagesPage() {
     if (!targetUserId && !targetHandle) return;
 
     void (async () => {
-      let query = supabase.from("profiles").select("id, handle, display_name, avatar_url");
-      if (targetUserId) {
-        query = query.eq("id", targetUserId);
-      } else if (targetHandle) {
-        query = query.eq("handle", targetHandle);
-      }
-      const { data } = await query.maybeSingle();
-      if (data) {
-        await openConversationWith(data);
-        setMobileView("chat");
+      try {
+        let query = supabase.from("profiles").select("id, handle, display_name, avatar_url");
+        if (targetUserId) {
+          query = query.eq("id", targetUserId);
+        } else if (targetHandle) {
+          query = query.eq("handle", targetHandle);
+        }
+        const { data, error } = await query.maybeSingle();
+        if (error) {
+          console.warn("Could not query profile for chat:", error);
+          return;
+        }
+        if (data) {
+          await openConversationWith(data);
+          setMobileView("chat");
+        }
+      } catch (err) {
+        console.warn("Failed to auto-open conversation:", err);
       }
     })();
   }, [searchParams.user, searchParams.handle, openConversationWith]);
@@ -54,8 +63,8 @@ function MessagesPage() {
   const filtered = conversations.filter(
     (c) =>
       !searchQ ||
-      c.participantName.toLowerCase().includes(searchQ.toLowerCase()) ||
-      c.participantHandle.toLowerCase().includes(searchQ.toLowerCase()),
+      (c.participantName && c.participantName.toLowerCase().includes(searchQ.toLowerCase())) ||
+      (c.participantHandle && c.participantHandle.toLowerCase().includes(searchQ.toLowerCase())),
   );
 
   const activeConv = conversations.find((c) => c.id === activeConvId) ?? null;
@@ -176,5 +185,29 @@ function EmptyState() {
         Select a conversation from the left to start chatting, or message a writer who follows you.
       </p>
     </div>
+  );
+}
+
+function MessagesErrorComponent() {
+  return (
+    <AppShell title="Messages">
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <div className="rounded-full bg-destructive/10 p-4 text-destructive">
+          <MessageCircle className="size-8" />
+        </div>
+        <h2 className="text-xl font-bold">Unable to load messages</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          There was an issue opening your conversations. Please try refreshing or returning to the feed.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Refresh
+          </Button>
+          <Button asChild>
+            <Link to="/feed">Go to Feed</Link>
+          </Button>
+        </div>
+      </div>
+    </AppShell>
   );
 }
