@@ -50,8 +50,9 @@ export function initialsOf(name: string) {
 }
 
 export function toWriter(row: ProfileRow | any): Writer {
-  const name = row.display_name || row.username || "Writer";
-  const handle = row.handle || row.username || "writer";
+  const name = (row.display_name || row.username || "Writer").trim() || "Writer";
+  const handle = (row.handle || row.username || "writer").trim() || "writer";
+  const rawAvatar = (row.avatar_url || row.profile_image || "").trim();
   return {
     id: row.id,
     name,
@@ -59,7 +60,7 @@ export function toWriter(row: ProfileRow | any): Writer {
     initials: initialsOf(name),
     bio: row.bio ?? null,
     location: row.location ?? null,
-    avatarUrl: row.avatar_url ?? row.profile_image ?? null,
+    avatarUrl: rawAvatar.length > 0 ? rawAvatar : null,
   };
 }
 
@@ -77,7 +78,7 @@ export function readTimeOf(body: string) {
 }
 
 export const POST_SELECT =
-  "id, title, body, tags, created_at, author:profiles!posts_author_id_fkey(id, handle, display_name, bio, location, avatar_url), likes(count), comments(count)";
+  "id, title, body, content, tags, created_at, author:profiles!posts_author_id_fkey(id, handle, display_name, bio, location, avatar_url, profile_image), likes(count), comments(count)";
 
 type PostRow = {
   id: string;

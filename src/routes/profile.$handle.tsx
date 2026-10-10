@@ -81,8 +81,30 @@ export const Route = createFileRoute("/profile/$handle")({
         : [],
     };
   },
+  errorComponent: ProfileErrorComponent,
   component: ProfilePage,
 });
+
+function ProfileErrorComponent() {
+  return (
+    <AppShell title="Profile">
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold">Profile Unavailable</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          We couldn't load this writer's profile. Please try refreshing or return to the feed.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Refresh
+          </Button>
+          <Button asChild>
+            <Link to="/feed">Go to Feed</Link>
+          </Button>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
 
 function ProfilePage() {
   const { handle } = Route.useParams();
@@ -115,7 +137,7 @@ function ProfilePage() {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "id, handle, display_name, bio, location, avatar_url, followers_count, following_count",
+        "id, handle, display_name, bio, location, avatar_url, profile_image, followers_count, following_count",
       )
       .eq("handle", handle)
       .maybeSingle();

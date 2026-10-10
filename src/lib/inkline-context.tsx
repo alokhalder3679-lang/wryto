@@ -53,7 +53,7 @@ export function InklineProvider({ children }: { children: ReactNode }) {
         .limit(100),
       supabase
         .from("profiles")
-        .select("id, handle, display_name, bio, location, avatar_url")
+        .select("id, handle, display_name, bio, location, avatar_url, profile_image")
         .order("created_at", { ascending: false })
         .limit(50),
     ]);
@@ -78,7 +78,7 @@ export function InklineProvider({ children }: { children: ReactNode }) {
         .eq("follower_id", id),
       supabase
         .from("profiles")
-        .select("id, handle, display_name, bio, location, avatar_url")
+        .select("id, handle, display_name, bio, location, avatar_url, profile_image")
         .eq("id", id)
         .maybeSingle(),
       supabase

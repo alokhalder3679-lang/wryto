@@ -64,8 +64,23 @@ export const Route = createFileRoute("/settings")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  errorComponent: SettingsErrorComponent,
   component: SettingsPage,
 });
+
+function SettingsErrorComponent() {
+  return (
+    <AppShell title="Settings">
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold">Unable to load settings</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          There was an issue opening your settings. Please try reloading the page.
+        </p>
+        <Button onClick={() => window.location.reload()}>Reload Settings</Button>
+      </div>
+    </AppShell>
+  );
+}
 
 const SECTIONS = [
   { id: "account", icon: UserCog, key: "account" },

@@ -21,8 +21,23 @@ export const Route = createFileRoute("/notifications")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  errorComponent: NotificationsErrorComponent,
   component: NotificationsPage,
 });
+
+function NotificationsErrorComponent() {
+  return (
+    <AppShell title="Notifications">
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold">Unable to load notifications</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          There was a problem loading your notification stream. Please try refreshing.
+        </p>
+        <Button onClick={() => window.location.reload()}>Refresh</Button>
+      </div>
+    </AppShell>
+  );
+}
 
 type Item = {
   id: string;
@@ -48,6 +63,7 @@ function NotificationsPage() {
       .select(
         "id, kind, post_id, is_read, created_at, actor:profiles!notifications_actor_id_fkey(display_name, handle)",
       )
+      .eq("recipient_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50);
     setItems(

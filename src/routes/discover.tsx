@@ -30,23 +30,38 @@ export const Route = createFileRoute("/discover")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  errorComponent: DiscoverErrorComponent,
   component: DiscoverPage,
 });
+
+function DiscoverErrorComponent() {
+  return (
+    <AppShell title="Discover">
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold">Unable to load discover</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          There was an issue loading the discover page. Please try refreshing.
+        </p>
+        <Button onClick={() => window.location.reload()}>Refresh</Button>
+      </div>
+    </AppShell>
+  );
+}
 
 function DiscoverPage() {
   const { q } = Route.useSearch();
   const [query, setQuery] = useState(q);
   const { posts, writers, profile } = useInkline();
   const term = query.trim().toLowerCase();
-  const matches = posts.filter(
-    (post) =>
-      !term ||
-      post.body.toLowerCase().includes(term) ||
-      post.title?.toLowerCase().includes(term) ||
-      post.tags.some((tag) => tag.includes(term)) ||
-      post.author.name.toLowerCase().includes(term) ||
-      post.author.handle.includes(term),
-  );
+  const matches = posts.filter((post) => {
+    if (!term) return true;
+    const bodyMatch = post.body?.toLowerCase().includes(term);
+    const titleMatch = post.title?.toLowerCase().includes(term);
+    const tagMatch = Array.isArray(post.tags) && post.tags.some((tag) => tag.toLowerCase().includes(term));
+    const authorNameMatch = post.author?.name?.toLowerCase().includes(term);
+    const authorHandleMatch = post.author?.handle?.toLowerCase().includes(term);
+    return bodyMatch || titleMatch || tagMatch || authorNameMatch || authorHandleMatch;
+  });
   const [people, setPeople] = useState<
     { handle: string; display_name: string; bio: string | null; followers_count: number }[]
   >([]);

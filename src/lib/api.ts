@@ -101,7 +101,7 @@ export async function fetchComments(postId: string): Promise<Comment[]> {
   const { data, error } = await supabase
     .from("comments")
     .select(
-      "id, body, content, created_at, author:profiles!comments_author_id_fkey(id, handle, display_name, bio, location, avatar_url)",
+      "id, body, content, created_at, author:profiles!comments_author_id_fkey(id, handle, display_name, bio, location, avatar_url, profile_image)",
     )
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
@@ -134,7 +134,7 @@ export async function addComment(
       content: content.trim(),
     })
     .select(
-      "id, body, created_at, author:profiles!comments_author_id_fkey(id, handle, display_name, bio, location, avatar_url)",
+      "id, body, content, created_at, author:profiles!comments_author_id_fkey(id, handle, display_name, bio, location, avatar_url, profile_image)",
     )
     .single();
 

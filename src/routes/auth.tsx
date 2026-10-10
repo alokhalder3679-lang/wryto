@@ -25,8 +25,26 @@ export const Route = createFileRoute("/auth")({
     const n = s["next"];
     return typeof n === "string" && n.startsWith("/") && !n.startsWith("//") ? { next: n } : {};
   },
+  errorComponent: AuthErrorComponent,
   component: AuthPage,
 });
+
+function AuthErrorComponent() {
+  return (
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12 text-center">
+      <Link to="/" className="mb-8 flex items-center justify-center transition-opacity hover:opacity-90">
+        <WrytoLogo variant="full" size="lg" className="h-16" />
+      </Link>
+      <h1 className="font-display text-2xl font-semibold">Authentication temporarily unavailable</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        There was an unexpected error initializing authentication. Please refresh the page to retry.
+      </p>
+      <div className="mt-6">
+        <Button onClick={() => window.location.reload()}>Refresh</Button>
+      </div>
+    </main>
+  );
+}
 
 type Mode = "signin" | "signup" | "verify" | "forgot";
 const COOLDOWN = 60;

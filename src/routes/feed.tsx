@@ -24,8 +24,23 @@ export const Route = createFileRoute("/feed")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  errorComponent: FeedErrorComponent,
   component: FeedPage,
 });
+
+function FeedErrorComponent() {
+  return (
+    <AppShell>
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold">Unable to load feed</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          There was a problem loading your feed. Please try refreshing.
+        </p>
+        <Button onClick={() => window.location.reload()}>Refresh</Button>
+      </div>
+    </AppShell>
+  );
+}
 
 function FollowingFeed() {
   const { user, followed, loading: contextLoading } = useInkline();
@@ -102,7 +117,9 @@ function FeedPage() {
   const { posts, loading } = useInkline();
   const [topic, setTopic] = useState("For you");
   const filtered =
-    topic === "For you" ? posts : posts.filter((post) => post.tags.includes(topic.toLowerCase()));
+    topic === "For you"
+      ? posts
+      : posts.filter((post) => Array.isArray(post.tags) && post.tags.includes(topic.toLowerCase()));
   const isFollowingTab = topic === "Following";
   return (
     <AppShell>

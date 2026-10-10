@@ -18,8 +18,29 @@ export const Route = createFileRoute("/reset-password")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  errorComponent: ResetPasswordErrorComponent,
   component: ResetPassword,
 });
+
+function ResetPasswordErrorComponent() {
+  return (
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12 text-center">
+      <Link to="/" className="mb-8 flex items-center justify-center transition-opacity hover:opacity-90">
+        <WrytoLogo variant="full" size="lg" className="h-16" />
+      </Link>
+      <h1 className="font-display text-2xl font-semibold">Unable to load password reset</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Please try requesting a new reset link or sign in to your account.
+      </p>
+      <div className="mt-6 flex justify-center gap-3">
+        <Button onClick={() => window.location.reload()}>Refresh</Button>
+        <Button variant="outline" asChild>
+          <Link to="/auth">Back to Sign In</Link>
+        </Button>
+      </div>
+    </main>
+  );
+}
 
 function ResetPassword() {
   const navigate = useNavigate();
