@@ -18,9 +18,11 @@ type InklineContextValue = {
   writers: Writer[];
   liked: Set<string>;
   followed: Set<string>;
+  session: Session | null;
   user: User | null;
   profile: Writer | null;
   loading: boolean;
+  authInitialized: boolean;
   unreadCount: number;
   toggleLike: (id: string) => Promise<void>;
   toggleFollow: (handle: string) => Promise<boolean>;
@@ -37,6 +39,7 @@ export function InklineProvider({ children }: { children: ReactNode }) {
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [followed, setFollowed] = useState<Set<string>>(new Set());
   const [session, setSession] = useState<Session | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const [profile, setProfile] = useState<Writer | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -114,9 +117,34 @@ export function InklineProvider({ children }: { children: ReactNode }) {
   }, [loadPublic, loadPersonal]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
-    return () => sub.subscription.unsubscribe();
+    let mounted = true;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (mounted) {
+          setSession(data?.session ?? null);
+          setAuthInitialized(true);
+        }
+      })
+      .catch((err) => {
+        console.warn("[WrytoAuth] Failed to restore session:", err);
+        if (mounted) {
+          setSession(null);
+          setAuthInitialized(true);
+        }
+      });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+      if (mounted) {
+        setSession(next);
+        setAuthInitialized(true);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -282,11 +310,19 @@ export function InklineProvider({ children }: { children: ReactNode }) {
       },
       refresh,
       signOut: async () => {
-        await supabase.auth.signOut();
+        try {
+          await supabase.auth.signOut();
+        } catch (e) {
+          console.warn("[WrytoAuth] signOut error:", e);
+        }
         setSession(null);
+        setLiked(new Set());
+        setFollowed(new Set());
+        setProfile(null);
+        setUnreadCount(0);
       },
     }),
-    [posts, writers, liked, followed, session, profile, loading, unreadCount, refresh],
+    [posts, writers, liked, followed, session, authInitialized, profile, loading, unreadCount, refresh],
   );
 
   return <InklineContext.Provider value={value}>{children}</InklineContext.Provider>;
@@ -297,9 +333,11 @@ export const FALLBACK_INKLINE_CONTEXT: InklineContextValue = {
   writers: [],
   liked: new Set<string>(),
   followed: new Set<string>(),
+  session: null,
   user: null,
   profile: null,
   loading: false,
+  authInitialized: true,
   unreadCount: 0,
   toggleLike: async () => {},
   toggleFollow: async () => false,

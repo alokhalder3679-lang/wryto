@@ -1,5 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import CustomHero from "@/components/velorah-hero";
+import { useInkline } from "@/lib/inkline-context";
 
 export const Route = createFileRoute("/")({
   staticData: { sitemap: true },
@@ -24,6 +26,45 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const navigate = useNavigate();
+  const { session, user, authInitialized } = useInkline();
+  const isAuthenticated = Boolean(session?.user || user);
+
+  useEffect(() => {
+    if (authInitialized && isAuthenticated) {
+      void navigate({ to: "/feed", replace: true });
+    }
+  }, [authInitialized, isAuthenticated, navigate]);
+
+  // While restoring and validating session on startup:
+  if (!authInitialized) {
+    return (
+      <div
+        className="min-h-screen h-screen w-full flex flex-col items-center justify-center bg-[#00172d] text-white"
+        aria-label="Checking session..."
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        </div>
+      </div>
+    );
+  }
+
+  // Once authenticated session is confirmed, keep clean background until transition to /feed finishes
+  if (isAuthenticated) {
+    return (
+      <div
+        className="min-h-screen h-screen w-full flex flex-col items-center justify-center bg-[#00172d] text-white"
+        aria-label="Redirecting to feed..."
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div className="size-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        </div>
+      </div>
+    );
+  }
+
+  // Unauthenticated user: render the full public Landing Page
   return <CustomHero />;
 }
 
