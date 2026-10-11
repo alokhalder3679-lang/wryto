@@ -265,6 +265,16 @@ export async function toggleFollow(
   followingId: string,
   currentlyFollowing: boolean,
 ): Promise<boolean> {
+  if (
+    !followerId ||
+    !followingId ||
+    followerId === followingId ||
+    followerId === "me" ||
+    followingId === "me"
+  ) {
+    return false;
+  }
+
   if (currentlyFollowing) {
     const { error } = await supabase
       .from("followers")

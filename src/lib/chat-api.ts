@@ -47,7 +47,14 @@ export type DbCall = {
 // 1. Conversations & Messages
 // =============================================================================
 
+export function isValidUuid(id: unknown): id is string {
+  if (typeof id !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+}
+
 export async function fetchUserConversations(userId: string): Promise<DbConversation[]> {
+  if (!isValidUuid(userId)) return [];
+
   try {
     const { data, error } = await supabase
       .from("conversations")
@@ -59,15 +66,19 @@ export async function fetchUserConversations(userId: string): Promise<DbConversa
 
     const conversations = data as DbConversation[];
     // Hydrate participant profile for each conversation
-    const participantIds = conversations.map((c) =>
-      c.user1_id === userId ? c.user2_id : c.user1_id,
+    const participantIds = Array.from(
+      new Set(
+        conversations
+          .map((c) => (c.user1_id === userId ? c.user2_id : c.user1_id))
+          .filter(isValidUuid),
+      ),
     );
 
     if (participantIds.length > 0) {
       const [profilesRes, presenceRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, handle, display_name, avatar_url, is_online, last_seen")
+          .select("id, handle, display_name, avatar_url, profile_image, is_online, last_seen")
           .in("id", participantIds),
         supabase
           .from("user_presence")
@@ -83,6 +94,7 @@ export async function fetchUserConversations(userId: string): Promise<DbConversa
             p.id,
             {
               ...p,
+              avatar_url: p.avatar_url || p.profile_image || null,
               is_online: pres ? Boolean(pres.is_online) : p.is_online || false,
               last_seen: pres ? pres.last_seen : p.last_seen || null,
             },
@@ -107,6 +119,8 @@ export async function fetchConversationMessages(
   conversationId: string,
   limit = 100,
 ): Promise<DbMessage[]> {
+  if (!isValidUuid(conversationId)) return [];
+
   try {
     const { data, error } = await supabase
       .from("messages")
@@ -136,11 +150,17 @@ export async function sendChatMessage(input: {
 }): Promise<SendChatMessageResult> {
   const content = input.content.trim();
   if (!content) return { message: null, error: "Message cannot be empty" };
+  if (!isValidUuid(input.senderId) || !isValidUuid(input.receiverId)) {
+    return { message: null, error: "Invalid sender or recipient ID" };
+  }
+  if (input.senderId === input.receiverId) {
+    return { message: null, error: "Cannot send message to yourself" };
+  }
 
   try {
     // 1. Resolve or create conversation in database
     let conversationId = input.conversationId;
-    if (!conversationId || conversationId.startsWith("conv-")) {
+    if (!conversationId || !isValidUuid(conversationId)) {
       const dbConv = await getOrCreateConversation(input.senderId, input.receiverId);
       if (dbConv?.id) {
         conversationId = dbConv.id;
@@ -148,7 +168,7 @@ export async function sendChatMessage(input: {
     }
 
     const validConvId =
-      conversationId && !conversationId.startsWith("conv-") ? conversationId : null;
+      conversationId && isValidUuid(conversationId) ? conversationId : null;
 
     // 2. Atomic RPC function execution
     const { data: rpcRes, error: rpcErr } = await supabase.rpc("send_chat_message", {
@@ -189,6 +209,8 @@ export async function markMessagesAsSeen(
   conversationId: string,
   receiverId: string,
 ): Promise<boolean> {
+  if (!isValidUuid(conversationId) || !isValidUuid(receiverId)) return false;
+
   try {
     const { error } = await supabase
       .from("messages")
@@ -219,8 +241,13 @@ export async function getFollowRelationship(
   participantId: string,
 ): Promise<{ isFollowing: boolean; isFollower: boolean }> {
   try {
-    if (!currentUserId || !participantId || currentUserId === participantId) {
-      return { isFollowing: true, isFollower: true };
+    if (
+      !isValidUuid(currentUserId) ||
+      !isValidUuid(participantId) ||
+      currentUserId === participantId
+    ) {
+      const isSelf = currentUserId === participantId && isValidUuid(currentUserId);
+      return { isFollowing: isSelf, isFollower: isSelf };
     }
     const [followingRes, followerRes] = await Promise.all([
       supabase
@@ -251,6 +278,10 @@ export async function getOrCreateConversation(
   userA: string,
   userB: string,
 ): Promise<DbConversation | null> {
+  if (!isValidUuid(userA) || !isValidUuid(userB) || userA === userB) {
+    return null;
+  }
+
   try {
     // 1. Try secure RPC function
     const { data: rpcConvId, error: rpcErr } = await supabase.rpc("get_or_create_conversation", {
@@ -322,13 +353,26 @@ export async function getOrCreateConversation(
 // 2. Realtime Messages & Conversation Subscription
 // =============================================================================
 
+function getCleanChannel(name: string, opts?: any): RealtimeChannel {
+  const existing = supabase.getChannels().find((c) => c.topic === name || c.topic === `realtime:${name}`);
+  if (existing) {
+    try {
+      void supabase.removeChannel(existing);
+    } catch {
+      // ignore
+    }
+  }
+  return supabase.channel(name, opts);
+}
+
 export function subscribeToMessages(
   userId: string,
   onNewMessage: (msg: DbMessage) => void,
   onMessageSeen?: (msg: DbMessage) => void,
-): RealtimeChannel {
-  const channel = supabase
-    .channel(`chat:messages:${userId}`)
+): RealtimeChannel | null {
+  if (!isValidUuid(userId)) return null;
+
+  const channel = getCleanChannel(`chat:messages:${userId}`)
     .on(
       "postgres_changes",
       {
@@ -372,7 +416,7 @@ export function subscribeToMessages(
 // =============================================================================
 
 export async function updateUserPresenceInDb(userId: string, isOnline: boolean): Promise<void> {
-  if (!userId) return;
+  if (!isValidUuid(userId)) return;
   try {
     const { error } = await supabase.rpc("set_user_presence", {
       p_user_id: userId,
@@ -398,8 +442,7 @@ export async function updateUserPresenceInDb(userId: string, isOnline: boolean):
 export function subscribeToUserPresence(
   onPresenceUpdate: (data: { userId: string; isOnline: boolean; lastSeen: string | null }) => void,
 ): RealtimeChannel {
-  const channel = supabase
-    .channel("realtime:user_presence")
+  const channel = getCleanChannel("realtime:user_presence")
     .on(
       "postgres_changes",
       {
@@ -426,8 +469,10 @@ export function subscribeToUserPresence(
 export function subscribeToPresence(
   userId: string,
   onPresenceChange: (onlineUserIds: Set<string>) => void,
-): RealtimeChannel {
-  const channel = supabase.channel("online-users", {
+): RealtimeChannel | null {
+  if (!isValidUuid(userId)) return null;
+
+  const channel = getCleanChannel("online-users", {
     config: { presence: { key: userId } },
   });
 
@@ -587,10 +632,9 @@ export function subscribeToTypingChannel(
   conversationId: string,
   onTyping: (payload: { userId: string; isTyping: boolean }) => void,
 ): RealtimeChannel {
-  return supabase
-    .channel(`chat:typing:${conversationId}`, {
-      config: { broadcast: { self: false } },
-    })
+  return getCleanChannel(`chat:typing:${conversationId}`, {
+    config: { broadcast: { self: false } },
+  })
     .on("broadcast", { event: "typing" }, ({ payload }) => {
       if (payload) onTyping(payload as { userId: string; isTyping: boolean });
     })
@@ -606,6 +650,8 @@ export async function createCallRecord(
   receiverId: string,
   callType: "audio" | "video",
 ): Promise<DbCall | null> {
+  if (!isValidUuid(callerId) || !isValidUuid(receiverId)) return null;
+
   try {
     const { data, error } = await supabase
       .from("calls")
@@ -634,6 +680,8 @@ export async function updateCallStatus(
   callId: string,
   status: "ringing" | "accepted" | "rejected" | "ended",
 ): Promise<boolean> {
+  if (!isValidUuid(callId)) return false;
+
   try {
     const patch: any = { status };
     if (status === "ended" || status === "rejected") {
@@ -650,9 +698,10 @@ export function subscribeToUserCalls(
   userId: string,
   onIncomingCall: (call: DbCall) => void,
   onCallStateUpdate: (call: DbCall) => void,
-): RealtimeChannel {
-  return supabase
-    .channel(`realtime:calls:${userId}`)
+): RealtimeChannel | null {
+  if (!isValidUuid(userId)) return null;
+
+  return getCleanChannel(`realtime:calls:${userId}`)
     .on(
       "postgres_changes",
       {
@@ -690,7 +739,7 @@ export function createCallSignalingChannel(
   sendSignal: (signal: WebRTCSignal, senderId: string) => void;
   leave: () => void;
 } {
-  const channel = supabase.channel(`call:signaling:${callId}`, {
+  const channel = getCleanChannel(`call:signaling:${callId}`, {
     config: { broadcast: { self: false } },
   });
 
@@ -716,3 +765,4 @@ export function createCallSignalingChannel(
 
   return { channel, sendSignal, leave };
 }
+

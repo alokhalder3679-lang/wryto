@@ -33,6 +33,7 @@ import {
   getOrCreateConversation,
   formatMessageTimestamp,
   formatLastSeen,
+  isValidUuid,
   type DbMessage,
 } from "./chat-api";
 import { WebRTCManager, type WebRTCSignal } from "./webrtc";
@@ -107,6 +108,7 @@ type ChatContextValue = {
     handle: string;
     display_name: string;
     avatar_url?: string | null;
+    profile_image?: string | null;
   }) => Promise<string>;
   onlineUserIds: Set<string>;
   call: CallState;
@@ -124,7 +126,7 @@ const ChatContext = createContext<ChatContextValue | null>(null);
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useInkline();
   // Always use the authenticated auth.users id — it is what RLS compares against auth.uid().
-  const currentUserId = user?.id ?? null;
+  const currentUserId = user?.id && isValidUuid(user.id) ? user.id : null;
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -151,7 +153,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // ── Load Real Conversations From Supabase ───────────────────
   const loadConversations = useCallback(async () => {
-    if (!currentUserId) return;
+    if (!currentUserId || !isValidUuid(currentUserId)) return;
     const dbConvs = await fetchUserConversations(currentUserId);
     const formatted: Conversation[] = dbConvs.map((c) => {
       const peer = c.participant;
@@ -161,7 +163,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         participantId: peerId,
         participantName: peer?.display_name || peer?.handle || "Writer",
         participantHandle: peer?.handle || "writer",
-        participantAvatar: peer?.avatar_url || null,
+        participantAvatar: peer?.avatar_url || (peer as any)?.profile_image || null,
         lastMessage: c.last_message || "",
         lastAt: c.updated_at,
         unread: 0,
@@ -175,7 +177,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         (p) =>
           p.id.startsWith("conv-") && !formatted.some((f) => f.participantId === p.participantId),
       );
-      return [...pending, ...formatted];
+      // Deduplicate by participantId and conversation id
+      const seen = new Set<string>();
+      const combined = [...pending, ...formatted].filter((c) => {
+        if (seen.has(c.participantId) || seen.has(c.id)) return false;
+        seen.add(c.participantId);
+        seen.add(c.id);
+        return true;
+      });
+      return combined;
     });
   }, [currentUserId]);
 
@@ -191,7 +201,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // ── Load Messages for Active Conversation ───────────────────
   useEffect(() => {
-    if (!activeConvId || activeConvId.startsWith("conv-")) return;
+    if (!activeConvId || !isValidUuid(activeConvId)) return;
 
     let cancelled = false;
     void fetchConversationMessages(activeConvId).then((dbMsgs) => {
@@ -211,7 +221,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       });
     });
 
-    if (currentUserId) {
+    if (currentUserId && isValidUuid(currentUserId)) {
       void markMessagesAsSeen(activeConvId, currentUserId);
     }
     return () => {
@@ -221,7 +231,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // ── Realtime Messages Subscription (one channel per signed-in user) ──
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || !isValidUuid(currentUserId)) return;
 
     const channel = subscribeToMessages(
       currentUserId,
@@ -294,13 +304,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     );
 
     return () => {
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [currentUserId, loadConversations]);
 
   // ── Realtime Presence / Online Status ────────────────────────
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || !isValidUuid(currentUserId)) return;
 
     // Report self online immediately
     void updateUserPresenceInDb(currentUserId, true);
@@ -357,14 +367,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
       void updateUserPresenceInDb(currentUserId, false);
-      void supabase.removeChannel(dbPresenceChannel);
-      void supabase.removeChannel(broadcastChannel);
+      if (dbPresenceChannel) void supabase.removeChannel(dbPresenceChannel);
+      if (broadcastChannel) void supabase.removeChannel(broadcastChannel);
     };
   }, [currentUserId]);
 
   // ── Realtime Typing Channel Subscription ────────────────────
   useEffect(() => {
-    if (!activeConvId || !currentUserId) return;
+    if (
+      !activeConvId ||
+      !currentUserId ||
+      !isValidUuid(currentUserId) ||
+      !isValidUuid(activeConvId)
+    ) {
+      return;
+    }
 
     const sub = subscribeToTypingChannel(activeConvId, ({ userId, isTyping }) => {
       if (userId !== currentUserId) {
@@ -380,7 +397,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     return () => {
       typingChannelRef.current = null;
-      void supabase.removeChannel(sub);
+      if (sub) void supabase.removeChannel(sub);
     };
   }, [activeConvId, currentUserId]);
 
@@ -395,7 +412,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // ── Incoming Calls Subscription ─────────────────────────────
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || !isValidUuid(currentUserId)) return;
 
     const channel = subscribeToUserCalls(
       currentUserId,
@@ -426,7 +443,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     );
 
     return () => {
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [currentUserId]);
 
@@ -437,32 +454,50 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       handle: string;
       display_name: string;
       avatar_url?: string | null;
+      profile_image?: string | null;
     }) => {
-      const existing = conversations.find((c) => c.participantId === participant.id);
+      if (!participant?.id) return "";
+
+      const existing = conversations.find(
+        (c) =>
+          c.participantId === participant.id ||
+          (isValidUuid(participant.id) && c.id === participant.id),
+      );
       if (existing) {
         setActiveConvId(existing.id);
         return existing.id;
       }
 
       let convId = `conv-${participant.id}`;
-      if (currentUserId) {
-        const dbConv = await getOrCreateConversation(currentUserId, participant.id);
-        if (dbConv?.id) convId = dbConv.id;
+      if (currentUserId && isValidUuid(currentUserId) && isValidUuid(participant.id)) {
+        try {
+          const dbConv = await getOrCreateConversation(currentUserId, participant.id);
+          if (dbConv?.id) convId = dbConv.id;
+        } catch (e) {
+          console.warn("getOrCreateConversation fallback:", e);
+        }
       }
+
+      const safeName = (participant.display_name || participant.handle || "Writer").trim() || "Writer";
+      const safeHandle = (participant.handle || "writer").trim() || "writer";
+      const safeAvatar = participant.avatar_url || participant.profile_image || null;
 
       const newConv: Conversation = {
         id: convId,
         participantId: participant.id,
-        participantName: participant.display_name,
-        participantHandle: participant.handle,
-        participantAvatar: participant.avatar_url || null,
+        participantName: safeName,
+        participantHandle: safeHandle,
+        participantAvatar: safeAvatar,
         lastMessage: "",
         lastAt: new Date().toISOString(),
         unread: 0,
         online: onlineUserIds.has(participant.id),
       };
 
-      setConversations((prev) => [newConv, ...prev.filter((c) => c.id !== convId)]);
+      setConversations((prev) => [
+        newConv,
+        ...prev.filter((c) => c.id !== convId && c.participantId !== participant.id),
+      ]);
       setActiveConvId(convId);
       return convId;
     },
@@ -474,8 +509,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (!body.trim()) return;
 
       const actualSenderId = currentUserId || senderId;
-      if (!actualSenderId || actualSenderId === "me") {
+      if (!actualSenderId || actualSenderId === "me" || !isValidUuid(actualSenderId)) {
         toast.error("Please sign in to send messages.");
+        return;
+      }
+
+      const conv = conversations.find((c) => c.id === convId);
+      const targetReceiver = receiverId || conv?.participantId;
+      if (!targetReceiver || !isValidUuid(targetReceiver)) {
+        toast.error("Unable to send message: invalid recipient.");
         return;
       }
 
@@ -492,26 +534,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setMessages((prev) => ({ ...prev, [convId]: [...(prev[convId] ?? []), newMsg] }));
 
       // Save previous state for rollback if sending is rejected
-      const conv = conversations.find((c) => c.id === convId);
       const prevLastMessage = conv?.lastMessage || "";
       const prevLastAt = conv?.lastAt || "";
 
       // Update conversation last message optimistically
       setConversations((prev) =>
         prev.map((c) =>
-          c.id === convId ? { ...c, lastMessage: body, lastAt: newMsg.createdAt } : c,
+          c.id === convId ? { ...c, lastMessage: body.trim(), lastAt: newMsg.createdAt } : c,
         ),
       );
 
       // Save to Supabase backend
-      const targetReceiver = receiverId || conv?.participantId;
-      if (!targetReceiver) return;
-
       void sendChatMessage({
-        conversationId: convId.startsWith("conv-") ? undefined : convId,
+        conversationId: isValidUuid(convId) ? convId : undefined,
         senderId: actualSenderId,
         receiverId: targetReceiver,
-        content: body,
+        content: body.trim(),
       }).then((res) => {
         if (res.error || !res.message) {
           // Rollback optimistic message on failure
@@ -542,7 +580,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             const currentList = prev[convId] ?? [];
             const updatedList = currentList.map((m) =>
               m.id === optimisticId
-                ? { ...m, status: "delivered", id: dbMsg.id, conversationId: realConvId }
+                ? {
+                    ...m,
+                    status: dbMsg.is_seen ? "seen" : "delivered",
+                    id: dbMsg.id,
+                    conversationId: realConvId,
+                  }
                 : m,
             );
             const { [convId]: _, ...rest } = prev;
@@ -552,7 +595,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => ({
             ...prev,
             [convId]: (prev[convId] ?? []).map((m) =>
-              m.id === optimisticId ? { ...m, status: "delivered", id: dbMsg.id } : m,
+              m.id === optimisticId
+                ? { ...m, status: dbMsg.is_seen ? "seen" : "delivered", id: dbMsg.id }
+                : m,
             ),
           }));
         }

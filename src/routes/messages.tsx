@@ -9,6 +9,7 @@ import { ChatNotificationToast } from "@/components/chat/chat-notifications";
 import { useChat } from "@/lib/chat-context";
 import { useInkline } from "@/lib/inkline-context";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidUuid } from "@/lib/chat-api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/messages")({
 
 function MessagesPage() {
   const { conversations, activeConvId, setActiveConvId, openConversationWith } = useChat();
-  const { user, profile } = useInkline();
+  const { user, profile, loading: authLoading } = useInkline();
   const searchParams = Route.useSearch();
   const myId = user?.id ?? profile?.id ?? "";
 
@@ -35,30 +36,75 @@ function MessagesPage() {
     const targetUserId = searchParams.user;
     const targetHandle = searchParams.handle;
 
-    if (!targetUserId && !targetHandle) return;
+    if (!user || (!targetUserId && !targetHandle)) return;
 
+    let cancelled = false;
     void (async () => {
       try {
-        let query = supabase.from("profiles").select("id, handle, display_name, avatar_url");
+        let query = supabase
+          .from("profiles")
+          .select("id, handle, display_name, avatar_url, profile_image");
         if (targetUserId) {
+          if (!isValidUuid(targetUserId)) {
+            console.warn("Invalid user UUID passed to messages:", targetUserId);
+            return;
+          }
           query = query.eq("id", targetUserId);
         } else if (targetHandle) {
-          query = query.eq("handle", targetHandle);
+          query = query.eq("handle", targetHandle.replace(/^@/, ""));
         }
         const { data, error } = await query.maybeSingle();
-        if (error) {
-          console.warn("Could not query profile for chat:", error);
+        if (cancelled || error || !data) {
+          if (error) console.warn("Could not query profile for chat:", error);
           return;
         }
-        if (data) {
-          await openConversationWith(data);
+        await openConversationWith(data);
+        if (!cancelled) {
           setMobileView("chat");
         }
       } catch (err) {
         console.warn("Failed to auto-open conversation:", err);
       }
     })();
-  }, [searchParams.user, searchParams.handle, openConversationWith]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, searchParams.user, searchParams.handle, openConversationWith]);
+
+  if (authLoading) {
+    return (
+      <AppShell title="Messages">
+        <div className="flex h-[calc(100dvh-5rem)] items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+            <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p className="text-sm">Loading messages…</p>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AppShell title="Messages">
+        <div className="flex flex-1 flex-col items-center justify-center p-8 text-center space-y-4 my-auto min-h-[400px]">
+          <div className="grid size-16 place-items-center rounded-full bg-primary/10 text-primary">
+            <MessageCircle className="size-8" />
+          </div>
+          <h2 className="text-xl font-bold">Sign in to view messages</h2>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Connect with writers across Wryto. Sign in to your account to send and receive direct messages.
+          </p>
+          <Button asChild className="rounded-full px-6">
+            <Link to="/auth" search={{ next: "/messages" }}>
+              Sign In
+            </Link>
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
 
   const filtered = conversations.filter(
     (c) =>

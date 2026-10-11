@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Lock, Send, Smile, UserCheck, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChat, type Conversation } from "@/lib/chat-context";
-import { getFollowRelationship, formatLastSeen } from "@/lib/chat-api";
+import { getFollowRelationship, formatLastSeen, isValidUuid } from "@/lib/chat-api";
 import { toggleFollow } from "@/lib/api";
 import { MessageBubble } from "./message-bubble";
 import { TypingIndicator } from "./typing-indicator";
@@ -40,11 +40,19 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
   const isMutual = isSelf || (relationship.isFollower && relationship.isFollowing);
   // Supabase RLS policy requires mutual follows to insert messages. Align UI with RLS to prevent crashes.
   const canChat = isMutual;
-  const canCall = isMutual; // Audio/Video calls require mutual follow
+  const canCall = isMutual && isValidUuid(conversation.participantId) && isValidUuid(myId);
 
   // Fetch relationship whenever participant or myId changes
   useEffect(() => {
-    if (!myId || !conversation.participantId) return;
+    if (
+      !myId ||
+      !conversation.participantId ||
+      !isValidUuid(myId) ||
+      !isValidUuid(conversation.participantId)
+    ) {
+      setCheckingRelationship(false);
+      return;
+    }
 
     let mounted = true;
     setCheckingRelationship(true);
@@ -78,8 +86,12 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
   // ── Follow / Unfollow Handler ────────────────────────────────
   async function handleToggleFollow() {
     if (followBusy || isSelf) return;
-    if (!myId || myId === "me") {
+    if (!myId || myId === "me" || !isValidUuid(myId)) {
       toast.error("Please sign in to follow writers.");
+      return;
+    }
+    if (!isValidUuid(conversation.participantId)) {
+      toast.error("Invalid writer profile.");
       return;
     }
 
@@ -127,8 +139,12 @@ export function ChatWindow({ conversation, myId, onBack }: Props) {
 
   function handleSend() {
     if (!canChat || !draft.trim()) return;
-    if (!myId || myId === "me") {
+    if (!myId || myId === "me" || !isValidUuid(myId)) {
       toast.error("Please sign in to send messages.");
+      return;
+    }
+    if (!isValidUuid(conversation.participantId)) {
+      toast.error("Cannot message an invalid recipient.");
       return;
     }
     sendMessage(conversation.id, myId, draft, conversation.participantId);
