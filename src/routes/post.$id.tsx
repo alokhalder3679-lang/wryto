@@ -205,6 +205,10 @@ function PostDetail() {
   async function addComment() {
     if (!text.trim() || !user) return;
     const body = text.trim();
+    if (body.length > 2000) {
+      toast.error("Response must be 2,000 characters or less.");
+      return;
+    }
     setText("");
     const { error } = await supabase.from("comments").insert({
       post_id: id,
@@ -219,7 +223,7 @@ function PostDetail() {
   }
 
   async function removeComment(commentId: string) {
-    if (!window.confirm("Delete this response?")) return;
+    if (!commentId || !window.confirm("Delete this response?")) return;
     await supabase.from("comments").delete().eq("id", commentId);
     await load();
   }
@@ -253,7 +257,8 @@ function PostDetail() {
           <div className="mt-5 flex gap-2">
             <Input
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              maxLength={2000}
+              onChange={(e) => setText(e.target.value.slice(0, 2000))}
               onKeyDown={(e) => e.key === "Enter" && void addComment()}
               placeholder="Add a thoughtful response…"
             />

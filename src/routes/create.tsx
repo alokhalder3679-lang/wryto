@@ -79,7 +79,8 @@ function CreatePage() {
       <div className="px-5 py-6 sm:px-8">
         <input
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          maxLength={150}
+          onChange={(e) => setTitle(e.target.value.slice(0, 150))}
           className="w-full bg-transparent font-display text-3xl font-semibold outline-none placeholder:text-muted-foreground sm:text-4xl"
           placeholder="Title (optional)"
           aria-label="Post title"

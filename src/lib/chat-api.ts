@@ -56,6 +56,13 @@ export async function fetchUserConversations(userId: string): Promise<DbConversa
   if (!isValidUuid(userId)) return [];
 
   try {
+    // Defense-in-depth: verify caller is authenticated and matches requested userId
+    const { data: sess } = await supabase.auth.getSession();
+    const activeUid = sess?.session?.user?.id;
+    if (!activeUid || activeUid !== userId) {
+      return [];
+    }
+
     const { data, error } = await supabase
       .from("conversations")
       .select("*")
@@ -117,15 +124,25 @@ export async function fetchUserConversations(userId: string): Promise<DbConversa
 
 export async function fetchConversationMessages(
   conversationId: string,
+  userId?: string,
   limit = 100,
 ): Promise<DbMessage[]> {
   if (!isValidUuid(conversationId)) return [];
 
   try {
+    // Defense-in-depth: resolve authenticated session to restrict access
+    let activeUid = userId;
+    if (!activeUid) {
+      const { data: sess } = await supabase.auth.getSession();
+      activeUid = sess?.session?.user?.id;
+    }
+    if (!activeUid || !isValidUuid(activeUid)) return [];
+
     const { data, error } = await supabase
       .from("messages")
       .select("*")
       .eq("conversation_id", conversationId)
+      .or(`sender_id.eq.${activeUid},receiver_id.eq.${activeUid}`)
       .order("created_at", { ascending: true })
       .limit(limit);
 
@@ -150,6 +167,9 @@ export async function sendChatMessage(input: {
 }): Promise<SendChatMessageResult> {
   const content = input.content.trim();
   if (!content) return { message: null, error: "Message cannot be empty" };
+  if (content.length > 5000) {
+    return { message: null, error: "Message must be 5,000 characters or less" };
+  }
   if (!isValidUuid(input.senderId) || !isValidUuid(input.receiverId)) {
     return { message: null, error: "Invalid sender or recipient ID" };
   }
@@ -167,8 +187,7 @@ export async function sendChatMessage(input: {
       }
     }
 
-    const validConvId =
-      conversationId && isValidUuid(conversationId) ? conversationId : null;
+    const validConvId = conversationId && isValidUuid(conversationId) ? conversationId : null;
 
     // 2. Atomic RPC function execution
     const { data: rpcRes, error: rpcErr } = await supabase.rpc("send_chat_message", {
@@ -358,7 +377,9 @@ function getCleanChannel(name: string, opts?: any): RealtimeChannel {
     if (typeof (supabase as any)?.getChannels === "function") {
       const channels = (supabase as any).getChannels();
       if (Array.isArray(channels)) {
-        const existing = channels.find((c: any) => c?.topic === name || c?.topic === `realtime:${name}`);
+        const existing = channels.find(
+          (c: any) => c?.topic === name || c?.topic === `realtime:${name}`,
+        );
         if (existing) {
           try {
             void supabase.removeChannel(existing);
@@ -815,4 +836,3 @@ export function createCallSignalingChannel(
 
   return { channel, sendSignal, leave };
 }
-

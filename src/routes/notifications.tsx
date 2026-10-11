@@ -98,7 +98,7 @@ function NotificationsPage() {
   useEffect(() => {
     if (!user) return;
     const channel = supabase
-      .channel("notifications-live")
+      .channel(`notifications-live-${user.id}`)
       .on(
         "postgres_changes",
         {

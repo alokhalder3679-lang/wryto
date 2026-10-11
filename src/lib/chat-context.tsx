@@ -257,7 +257,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
     if (!activeConvId || !isValidUuid(activeConvId)) return;
 
     let cancelled = false;
-    void fetchConversationMessages(activeConvId).then((dbMsgs) => {
+    void fetchConversationMessages(activeConvId, currentUserId).then((dbMsgs) => {
       if (cancelled) return;
       const mapped: ChatMessage[] = dbMsgs.map((m) => ({
         id: m.id,

@@ -25,7 +25,10 @@ export const Route = createFileRoute("/reset-password")({
 function ResetPasswordErrorComponent() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12 text-center">
-      <Link to="/" className="mb-8 flex items-center justify-center transition-opacity hover:opacity-90">
+      <Link
+        to="/"
+        className="mb-8 flex items-center justify-center transition-opacity hover:opacity-90"
+      >
         <WrytoLogo variant="full" size="lg" className="h-16" />
       </Link>
       <h1 className="font-display text-2xl font-semibold">Unable to load password reset</h1>
@@ -58,7 +61,7 @@ function ResetPassword() {
     void supabase.auth.getSession().then(({ data: s }) => {
       if (s.session) setReady(true);
     });
-    return () => data.subscription.unsubscribe();
+    return () => data?.subscription?.unsubscribe();
   }, []);
 
   const problems = passwordProblems(pw);

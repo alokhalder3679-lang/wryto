@@ -134,6 +134,24 @@ function SettingsPage() {
   const queryClient = useQueryClient();
   const deleteAccount = async () => {
     if (user) {
+      try {
+        await Promise.allSettled([
+          supabase.from("posts").delete().eq("author_id", user.id),
+          supabase.from("comments").delete().eq("author_id", user.id),
+          supabase.from("likes").delete().eq("user_id", user.id),
+          supabase
+            .from("followers")
+            .delete()
+            .or(`follower_id.eq.${user.id},following_id.eq.${user.id}`),
+          supabase
+            .from("user_blocks")
+            .delete()
+            .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`),
+          supabase.from("user_settings").delete().eq("user_id", user.id),
+        ]);
+      } catch (e) {
+        console.warn("deleteAccount database cleanup error:", e);
+      }
       localStorage.removeItem("inkline-settings");
       localStorage.removeItem("inkline-theme");
     }

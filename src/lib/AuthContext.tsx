@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      sub.subscription.unsubscribe();
+      sub?.subscription?.unsubscribe();
     };
   }, []);
 

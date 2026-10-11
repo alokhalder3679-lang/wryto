@@ -271,7 +271,10 @@ function ProfilePage() {
   }
 
   async function uploadAvatar(file: File) {
-    if (!writer) return;
+    if (!user || !writer || user.id !== writer.id) {
+      toast.error("You can only change your own profile photo.");
+      return;
+    }
     setBusy(true);
     try {
       const ext =
@@ -285,7 +288,7 @@ function ProfilePage() {
         setBusy(false);
         return;
       }
-      const path = `${writer.id}/avatar.${ext}`;
+      const path = `${user.id}/avatar.${ext}`;
       let finalAvatarUrl: string | null = null;
 
       // 1. Try Supabase Storage
@@ -316,7 +319,7 @@ function ProfilePage() {
           profile_image: finalAvatarUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", writer.id);
+        .eq("id", user.id);
 
       if (updateError) {
         toast.error("Couldn't save profile photo in database.");
