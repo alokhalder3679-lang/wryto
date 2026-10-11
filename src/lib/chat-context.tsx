@@ -5,14 +5,17 @@
 // =============================================================================
 
 import {
+  Component,
   createContext,
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
+  type ErrorInfo,
   type ReactNode,
 } from "react";
+import { reportLovableError } from "./lovable-error-reporting";
 import { useInkline } from "./inkline-context";
 import { toast } from "sonner";
 import {
@@ -121,9 +124,59 @@ type ChatContextValue = {
   toggleSpeaker: () => void;
 };
 
+export const FALLBACK_CHAT_CONTEXT: ChatContextValue = {
+  conversations: [],
+  activeConvId: null,
+  setActiveConvId: () => {},
+  messages: {},
+  typingPeers: {},
+  sendChatMessage: async () => false,
+  sendTypingSignal: () => {},
+  openConversationWith: async () => "",
+  onlineUserIds: new Set<string>(),
+  call: { phase: "idle" },
+  startCall: () => {},
+  acceptCall: () => {},
+  rejectCall: () => {},
+  endCall: () => {},
+  toggleMute: () => {},
+  toggleCam: () => {},
+  toggleSpeaker: () => {},
+};
+
 const ChatContext = createContext<ChatContextValue | null>(null);
 
-export function ChatProvider({ children }: { children: ReactNode }) {
+export class ChatErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  public state = { hasError: false };
+
+  public static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  public componentDidCatch(error: unknown, errorInfo: ErrorInfo): void {
+    console.error("[ChatSubsystem] Error caught by chat boundary:", error, errorInfo);
+    reportLovableError(error, {
+      boundary: "ChatSubsystem",
+      componentStack: errorInfo?.componentStack,
+    });
+  }
+
+  public render(): ReactNode {
+    if (this.state.hasError) {
+      return (
+        <ChatContext.Provider value={FALLBACK_CHAT_CONTEXT}>
+          {this.props.children}
+        </ChatContext.Provider>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function ChatProviderInner({ children }: { children: ReactNode }) {
   const { user } = useInkline();
   // Always use the authenticated auth.users id — it is what RLS compares against auth.uid().
   const currentUserId = user?.id && isValidUuid(user.id) ? user.id : null;
@@ -813,10 +866,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 }
 
+export function ChatProvider({ children }: { children: ReactNode }) {
+  return (
+    <ChatErrorBoundary>
+      <ChatProviderInner>{children}</ChatProviderInner>
+    </ChatErrorBoundary>
+  );
+}
+
 export function useChat() {
   const ctx = useContext(ChatContext);
-  if (!ctx) throw new Error("useChat must be used within ChatProvider");
-  return ctx;
+  return ctx ?? FALLBACK_CHAT_CONTEXT;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────

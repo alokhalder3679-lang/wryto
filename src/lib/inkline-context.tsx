@@ -45,20 +45,24 @@ export function InklineProvider({ children }: { children: ReactNode }) {
   userIdRef.current = userId;
 
   const loadPublic = useCallback(async () => {
-    const [postsResult, writersResult] = await Promise.all([
-      supabase
-        .from("posts")
-        .select(POST_SELECT)
-        .order("created_at", { ascending: false })
-        .limit(100),
-      supabase
-        .from("profiles")
-        .select("id, handle, display_name, bio, location, avatar_url, profile_image")
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
-    setPosts(((postsResult.data ?? []) as never[]).map(toPost).filter(Boolean) as Post[]);
-    setWriters(((writersResult.data ?? []) as never[]).map(toWriter));
+    try {
+      const [postsResult, writersResult] = await Promise.all([
+        supabase
+          .from("posts")
+          .select(POST_SELECT)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("profiles")
+          .select("id, handle, display_name, bio, location, avatar_url, profile_image")
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
+      setPosts(((postsResult.data ?? []) as never[]).map(toPost).filter(Boolean) as Post[]);
+      setWriters(((writersResult.data ?? []) as never[]).map(toWriter));
+    } catch (err) {
+      console.warn("[WrytoProvider] loadPublic error:", err);
+    }
   }, []);
 
   const loadPersonal = useCallback(async () => {
@@ -70,35 +74,39 @@ export function InklineProvider({ children }: { children: ReactNode }) {
       setUnreadCount(0);
       return;
     }
-    const [likesResult, followsResult, profileResult, unreadResult] = await Promise.all([
-      supabase.from("likes").select("post_id").eq("user_id", id),
-      supabase
-        .from("followers")
-        .select("following:profiles!followers_following_id_fkey(handle)")
-        .eq("follower_id", id),
-      supabase
-        .from("profiles")
-        .select("id, handle, display_name, bio, location, avatar_url, profile_image")
-        .eq("id", id)
-        .maybeSingle(),
-      supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("recipient_id", id)
-        .eq("is_read", false),
-    ]);
-    setLiked(
-      new Set(((likesResult.data ?? []) as { post_id: string }[]).map((row) => row.post_id)),
-    );
-    setFollowed(
-      new Set(
-        ((followsResult.data ?? []) as { following: { handle: string } | null }[])
-          .map((row) => row.following?.handle)
-          .filter(Boolean) as string[],
-      ),
-    );
-    setProfile(profileResult.data ? toWriter(profileResult.data) : null);
-    setUnreadCount(unreadResult.count ?? 0);
+    try {
+      const [likesResult, followsResult, profileResult, unreadResult] = await Promise.all([
+        supabase.from("likes").select("post_id").eq("user_id", id),
+        supabase
+          .from("followers")
+          .select("following:profiles!followers_following_id_fkey(handle)")
+          .eq("follower_id", id),
+        supabase
+          .from("profiles")
+          .select("id, handle, display_name, bio, location, avatar_url, profile_image")
+          .eq("id", id)
+          .maybeSingle(),
+        supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("recipient_id", id)
+          .eq("is_read", false),
+      ]);
+      setLiked(
+        new Set(((likesResult.data ?? []) as { post_id: string }[]).map((row) => row.post_id)),
+      );
+      setFollowed(
+        new Set(
+          ((followsResult.data ?? []) as { following: { handle: string } | null }[])
+            .map((row) => row.following?.handle)
+            .filter(Boolean) as string[],
+        ),
+      );
+      setProfile(profileResult.data ? toWriter(profileResult.data) : null);
+      setUnreadCount(unreadResult.count ?? 0);
+    } catch (err) {
+      console.warn("[WrytoProvider] loadPersonal error:", err);
+    }
   }, []);
 
   const refresh = useCallback(async () => {
@@ -284,10 +292,25 @@ export function InklineProvider({ children }: { children: ReactNode }) {
   return <InklineContext.Provider value={value}>{children}</InklineContext.Provider>;
 }
 
+export const FALLBACK_INKLINE_CONTEXT: InklineContextValue = {
+  posts: [],
+  writers: [],
+  liked: new Set<string>(),
+  followed: new Set<string>(),
+  user: null,
+  profile: null,
+  loading: false,
+  unreadCount: 0,
+  toggleLike: async () => {},
+  toggleFollow: async () => false,
+  publishPost: async () => null,
+  refresh: async () => {},
+  signOut: async () => {},
+};
+
 export function useInkline() {
   const value = useContext(InklineContext);
-  if (!value) throw new Error("useInkline must be used inside InklineProvider");
-  return value;
+  return value ?? FALLBACK_INKLINE_CONTEXT;
 }
 
 export const useWryto = useInkline;

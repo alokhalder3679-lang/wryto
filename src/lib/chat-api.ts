@@ -354,13 +354,22 @@ export async function getOrCreateConversation(
 // =============================================================================
 
 function getCleanChannel(name: string, opts?: any): RealtimeChannel {
-  const existing = supabase.getChannels().find((c) => c.topic === name || c.topic === `realtime:${name}`);
-  if (existing) {
-    try {
-      void supabase.removeChannel(existing);
-    } catch {
-      // ignore
+  try {
+    if (typeof (supabase as any)?.getChannels === "function") {
+      const channels = (supabase as any).getChannels();
+      if (Array.isArray(channels)) {
+        const existing = channels.find((c: any) => c?.topic === name || c?.topic === `realtime:${name}`);
+        if (existing) {
+          try {
+            void supabase.removeChannel(existing);
+          } catch {
+            // ignore
+          }
+        }
+      }
     }
+  } catch (err) {
+    console.warn("[ChatAPI] getCleanChannel lookup failed:", err);
   }
   return supabase.channel(name, opts);
 }
@@ -372,43 +381,48 @@ export function subscribeToMessages(
 ): RealtimeChannel | null {
   if (!isValidUuid(userId)) return null;
 
-  const channel = getCleanChannel(`chat:messages:${userId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-      },
-      (payload) => {
-        const msg = payload.new as DbMessage;
-        if (!msg) return;
-        // Deliver if current user is either receiver or sender
-        if (msg.receiver_id === userId || msg.sender_id === userId) {
-          onNewMessage(msg);
-        }
-      },
-    )
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "messages",
-      },
-      (payload) => {
-        const msg = payload.new as DbMessage;
-        if (!msg) return;
-        if (msg.receiver_id === userId || msg.sender_id === userId) {
-          onMessageSeen?.(msg);
-        }
-      },
-    )
-    .subscribe((status, err) => {
-      if (err) console.error(`[Realtime:chat] Subscription error:`, err);
-    });
+  try {
+    const channel = getCleanChannel(`chat:messages:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const msg = payload.new as DbMessage;
+          if (!msg) return;
+          // Deliver if current user is either receiver or sender
+          if (msg.receiver_id === userId || msg.sender_id === userId) {
+            onNewMessage(msg);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const msg = payload.new as DbMessage;
+          if (!msg) return;
+          if (msg.receiver_id === userId || msg.sender_id === userId) {
+            onMessageSeen?.(msg);
+          }
+        },
+      )
+      .subscribe((status, err) => {
+        if (err) console.error(`[Realtime:chat] Subscription error:`, err);
+      });
 
-  return channel;
+    return channel;
+  } catch (err) {
+    console.warn("[Realtime:chat] subscribeToMessages error:", err);
+    return null;
+  }
 }
 
 // =============================================================================
@@ -441,29 +455,34 @@ export async function updateUserPresenceInDb(userId: string, isOnline: boolean):
 
 export function subscribeToUserPresence(
   onPresenceUpdate: (data: { userId: string; isOnline: boolean; lastSeen: string | null }) => void,
-): RealtimeChannel {
-  const channel = getCleanChannel("realtime:user_presence")
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "user_presence",
-      },
-      (payload) => {
-        const row = payload.new as any;
-        if (row?.user_id) {
-          onPresenceUpdate({
-            userId: row.user_id,
-            isOnline: Boolean(row.is_online),
-            lastSeen: row.last_seen || null,
-          });
-        }
-      },
-    )
-    .subscribe();
+): RealtimeChannel | null {
+  try {
+    const channel = getCleanChannel("realtime:user_presence")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_presence",
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.user_id) {
+            onPresenceUpdate({
+              userId: row.user_id,
+              isOnline: Boolean(row.is_online),
+              lastSeen: row.last_seen || null,
+            });
+          }
+        },
+      )
+      .subscribe();
 
-  return channel;
+    return channel;
+  } catch (err) {
+    console.warn("[Realtime:presence] subscribeToUserPresence error:", err);
+    return null;
+  }
 }
 
 export function subscribeToPresence(
@@ -472,36 +491,57 @@ export function subscribeToPresence(
 ): RealtimeChannel | null {
   if (!isValidUuid(userId)) return null;
 
-  const channel = getCleanChannel("online-users", {
-    config: { presence: { key: userId } },
-  });
-
-  channel
-    .on("presence", { event: "sync" }, () => {
-      const state = channel.presenceState();
-      const onlineIds = new Set(Object.keys(state));
-      onPresenceChange(onlineIds);
-    })
-    .on("presence", { event: "join" }, ({ key }) => {
-      const state = channel.presenceState();
-      const onlineIds = new Set(Object.keys(state));
-      onlineIds.add(key);
-      onPresenceChange(onlineIds);
-    })
-    .on("presence", { event: "leave" }, ({ key }) => {
-      const state = channel.presenceState();
-      const onlineIds = new Set(Object.keys(state));
-      onlineIds.delete(key);
-      onPresenceChange(onlineIds);
-    })
-    .subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await channel.track({ online_at: new Date().toISOString() });
-        void updateUserPresenceInDb(userId, true);
-      }
+  try {
+    const channel = getCleanChannel("online-users", {
+      config: { presence: { key: userId } },
     });
 
-  return channel;
+    channel
+      .on("presence", { event: "sync" }, () => {
+        try {
+          const state = channel.presenceState();
+          const onlineIds = new Set(Object.keys(state));
+          onPresenceChange(onlineIds);
+        } catch (err) {
+          console.warn("[Realtime:presence] sync error:", err);
+        }
+      })
+      .on("presence", { event: "join" }, ({ key }) => {
+        try {
+          const state = channel.presenceState();
+          const onlineIds = new Set(Object.keys(state));
+          onlineIds.add(key);
+          onPresenceChange(onlineIds);
+        } catch (err) {
+          console.warn("[Realtime:presence] join error:", err);
+        }
+      })
+      .on("presence", { event: "leave" }, ({ key }) => {
+        try {
+          const state = channel.presenceState();
+          const onlineIds = new Set(Object.keys(state));
+          onlineIds.delete(key);
+          onPresenceChange(onlineIds);
+        } catch (err) {
+          console.warn("[Realtime:presence] leave error:", err);
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          try {
+            await channel.track({ online_at: new Date().toISOString() });
+          } catch {
+            // ignore
+          }
+          void updateUserPresenceInDb(userId, true);
+        }
+      });
+
+    return channel;
+  } catch (err) {
+    console.warn("[Realtime:presence] subscribeToPresence error:", err);
+    return null;
+  }
 }
 
 // =============================================================================
@@ -631,14 +671,19 @@ export function sendTypingBroadcast(
 export function subscribeToTypingChannel(
   conversationId: string,
   onTyping: (payload: { userId: string; isTyping: boolean }) => void,
-): RealtimeChannel {
-  return getCleanChannel(`chat:typing:${conversationId}`, {
-    config: { broadcast: { self: false } },
-  })
-    .on("broadcast", { event: "typing" }, ({ payload }) => {
-      if (payload) onTyping(payload as { userId: string; isTyping: boolean });
+): RealtimeChannel | null {
+  try {
+    return getCleanChannel(`chat:typing:${conversationId}`, {
+      config: { broadcast: { self: false } },
     })
-    .subscribe();
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload) onTyping(payload as { userId: string; isTyping: boolean });
+      })
+      .subscribe();
+  } catch (err) {
+    console.warn("[Realtime:typing] subscribeToTypingChannel error:", err);
+    return null;
+  }
 }
 
 // =============================================================================
@@ -701,34 +746,39 @@ export function subscribeToUserCalls(
 ): RealtimeChannel | null {
   if (!isValidUuid(userId)) return null;
 
-  return getCleanChannel(`realtime:calls:${userId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "calls",
-        filter: `receiver_id=eq.${userId}`,
-      },
-      (payload) => {
-        onIncomingCall(payload.new as DbCall);
-      },
-    )
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "calls",
-      },
-      (payload) => {
-        const row = payload.new as DbCall;
-        if (row.caller_id === userId || row.receiver_id === userId) {
-          onCallStateUpdate(row);
-        }
-      },
-    )
-    .subscribe();
+  try {
+    return getCleanChannel(`realtime:calls:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "calls",
+          filter: `receiver_id=eq.${userId}`,
+        },
+        (payload) => {
+          onIncomingCall(payload.new as DbCall);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "calls",
+        },
+        (payload) => {
+          const row = payload.new as DbCall;
+          if (row.caller_id === userId || row.receiver_id === userId) {
+            onCallStateUpdate(row);
+          }
+        },
+      )
+      .subscribe();
+  } catch (err) {
+    console.warn("[Realtime:calls] subscribeToUserCalls error:", err);
+    return null;
+  }
 }
 
 export function createCallSignalingChannel(

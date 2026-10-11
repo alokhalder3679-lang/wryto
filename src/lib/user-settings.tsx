@@ -39,17 +39,27 @@ type Ctx = {
 const SettingsContext = createContext<Ctx | null>(null);
 
 export function applySettings(s: Settings) {
-  const root = document.documentElement;
-  const dark =
-    s.theme === "dark" ||
-    (s.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  root.classList.toggle("dark", dark);
-  localStorage.setItem("inkline-theme", dark ? "dark" : "light");
-  root.style.fontSize =
-    s.font_size === "small" ? "15px" : s.font_size === "large" ? "18px" : "16px";
-  root.classList.toggle("reading-mode", s.reading_mode);
-  root.lang = s.language;
-  window.dispatchEvent(new CustomEvent("inkline-theme", { detail: dark }));
+  try {
+    const root = document.documentElement;
+    const dark =
+      s.theme === "dark" ||
+      (s.theme === "system" && typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)")?.matches);
+    root.classList.toggle("dark", dark);
+    try {
+      localStorage.setItem("inkline-theme", dark ? "dark" : "light");
+    } catch {
+      // ignore
+    }
+    root.style.fontSize =
+      s.font_size === "small" ? "15px" : s.font_size === "large" ? "18px" : "16px";
+    root.classList.toggle("reading-mode", s.reading_mode);
+    root.lang = s.language;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("inkline-theme", { detail: dark }));
+    }
+  } catch (e) {
+    console.warn("[UserSettings] applySettings error:", e);
+  }
 }
 
 export function UserSettingsProvider({ children }: { children: ReactNode }) {
@@ -111,8 +121,13 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
   );
 }
 
+export const FALLBACK_SETTINGS_CONTEXT: Ctx = {
+  settings: DEFAULT_SETTINGS,
+  update: async () => false,
+  t: (k: TKey) => dictionaries.en[k] ?? k,
+};
+
 export function useSettings() {
   const v = useContext(SettingsContext);
-  if (!v) throw new Error("useSettings must be used inside UserSettingsProvider");
-  return v;
+  return v ?? FALLBACK_SETTINGS_CONTEXT;
 }

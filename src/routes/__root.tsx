@@ -8,6 +8,7 @@ import { RememberMeGuard } from "../lib/remember-me";
 import { UserSettingsProvider } from "../lib/user-settings";
 import { ChatProvider } from "../lib/chat-context";
 import { Toaster } from "@/components/ui/sonner";
+import { SafeErrorBoundary } from "@/components/ui/error-boundary";
 
 function NotFoundComponent() {
   return (
@@ -80,15 +81,17 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WrytoProvider>
-        <UserSettingsProvider>
-          <ChatProvider>
-            <RememberMeGuard />
-            <Outlet />
-            <Toaster position="top-center" />
-          </ChatProvider>
-        </UserSettingsProvider>
-      </WrytoProvider>
+      <SafeErrorBoundary name="RootTree">
+        <WrytoProvider>
+          <UserSettingsProvider>
+            <ChatProvider>
+              <RememberMeGuard />
+              <Outlet />
+              <Toaster position="top-center" />
+            </ChatProvider>
+          </UserSettingsProvider>
+        </WrytoProvider>
+      </SafeErrorBoundary>
     </QueryClientProvider>
   );
 }

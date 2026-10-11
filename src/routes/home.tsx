@@ -10,5 +10,9 @@ function HomePage() {
 }
 
 export const Route = createFileRoute("/home")({
+  errorComponent: () => {
+    window.location.href = "/feed";
+    return null;
+  },
   component: HomePage,
 });

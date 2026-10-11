@@ -10,5 +10,9 @@ function ExplorePage() {
 }
 
 export const Route = createFileRoute("/explore")({
+  errorComponent: () => {
+    window.location.href = "/discover";
+    return null;
+  },
   component: ExplorePage,
 });

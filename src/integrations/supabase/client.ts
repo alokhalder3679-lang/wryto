@@ -550,9 +550,29 @@ export const supabase = {
 
   storage: liveSupabase.storage,
 
-  channel: (name: string) => liveSupabase.channel(name),
+  channel: (name: string, opts?: any) => liveSupabase.channel(name, opts),
+
+  getChannels: () => {
+    try {
+      return typeof (liveSupabase as any).getChannels === "function"
+        ? (liveSupabase as any).getChannels()
+        : [];
+    } catch {
+      return [];
+    }
+  },
 
   removeChannel: (channel: any) => liveSupabase.removeChannel(channel),
+
+  removeAllChannels: () => {
+    try {
+      return typeof (liveSupabase as any).removeAllChannels === "function"
+        ? (liveSupabase as any).removeAllChannels()
+        : Promise.resolve([]);
+    } catch {
+      return Promise.resolve([]);
+    }
+  },
 
   auth: liveSupabase.auth,
 };
