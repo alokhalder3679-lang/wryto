@@ -94,15 +94,15 @@ export async function fetchUserConversations(userId: string): Promise<DbConversa
       ]);
 
       const presenceMap = new Map((presenceRes.data ?? []).map((p: any) => [p.user_id, p]));
-      const profileMap = new Map(
+      const profileMap = new Map<string, any>(
         (profilesRes.data ?? []).map((p: any) => {
-          const pres = presenceMap.get(p.id);
+          const pres = presenceMap.get(p.id) as any;
           return [
             p.id,
             {
               ...p,
               avatar_url: p.avatar_url || p.profile_image || null,
-              is_online: pres ? Boolean(pres.is_online) : p.is_online || false,
+              is_online: pres ? Boolean(pres.is_online) : Boolean(p.is_online) || false,
               last_seen: pres ? pres.last_seen : p.last_seen || null,
             },
           ];

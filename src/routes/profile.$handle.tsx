@@ -108,7 +108,7 @@ function ProfileErrorComponent() {
 
 function ProfilePage() {
   const { handle } = Route.useParams();
-  const { posts, profile: me, signOut, refresh } = useInkline();
+  const { posts, profile: me, user, signOut, refresh } = useInkline();
   const { t } = useSettings();
   const [tab, setTab] = useState("Pieces");
   const [writer, setWriter] = useState<Writer | null>(null);

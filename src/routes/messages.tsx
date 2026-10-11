@@ -14,10 +14,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/messages")({
-  validateSearch: (search: Record<string, unknown>): { user?: string; handle?: string } => ({
-    user: typeof search.user === "string" ? search.user : undefined,
-    handle: typeof search.handle === "string" ? search.handle : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { user?: string; handle?: string } => {
+    const res: { user?: string; handle?: string } = {};
+    if (typeof search["user"] === "string") res.user = search["user"];
+    if (typeof search["handle"] === "string") res.handle = search["handle"];
+    return res;
+  },
   errorComponent: MessagesErrorComponent,
   component: MessagesPage,
 });

@@ -37,6 +37,7 @@ export function InklineProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [writers, setWriters] = useState<Writer[]>([]);
   const [liked, setLiked] = useState<Set<string>>(new Set());
+  const [followed, setFollowed] = useState<Set<string>>(new Set());
   const [session, setSession] = useState<Session | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -209,9 +210,11 @@ export function InklineProvider({ children }: { children: ReactNode }) {
       writers,
       liked,
       followed,
+      session,
       user: session?.user ?? null,
       profile,
       loading,
+      authInitialized,
       unreadCount,
       toggleLike: async (id) => {
         const me = userIdRef.current;

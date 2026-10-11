@@ -18,6 +18,7 @@ import {
 import { reportLovableError } from "./lovable-error-reporting";
 import { useInkline } from "./inkline-context";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   fetchUserConversations,
   fetchConversationMessages,
@@ -130,8 +131,9 @@ export const FALLBACK_CHAT_CONTEXT: ChatContextValue = {
   setActiveConvId: () => {},
   messages: {},
   typingPeers: {},
-  sendChatMessage: async () => false,
-  sendTypingSignal: () => {},
+  sendMessage: () => {},
+  sendTyping: () => {},
+  markRead: () => {},
   openConversationWith: async () => "",
   onlineUserIds: new Set<string>(),
   call: { phase: "idle" },
@@ -146,17 +148,14 @@ export const FALLBACK_CHAT_CONTEXT: ChatContextValue = {
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
-export class ChatErrorBoundary extends Component<
-  { children: ReactNode },
-  { hasError: boolean }
-> {
-  public state = { hasError: false };
+export class ChatErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  public override state = { hasError: false };
 
   public static getDerivedStateFromError(): { hasError: boolean } {
     return { hasError: true };
   }
 
-  public componentDidCatch(error: unknown, errorInfo: ErrorInfo): void {
+  public override componentDidCatch(error: unknown, errorInfo: ErrorInfo): void {
     console.error("[ChatSubsystem] Error caught by chat boundary:", error, errorInfo);
     reportLovableError(error, {
       boundary: "ChatSubsystem",
@@ -164,7 +163,7 @@ export class ChatErrorBoundary extends Component<
     });
   }
 
-  public render(): ReactNode {
+  public override render(): ReactNode {
     if (this.state.hasError) {
       return (
         <ChatContext.Provider value={FALLBACK_CHAT_CONTEXT}>
@@ -257,7 +256,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
     if (!activeConvId || !isValidUuid(activeConvId)) return;
 
     let cancelled = false;
-    void fetchConversationMessages(activeConvId, currentUserId).then((dbMsgs) => {
+    void fetchConversationMessages(activeConvId, currentUserId || undefined).then((dbMsgs) => {
       if (cancelled) return;
       const mapped: ChatMessage[] = dbMsgs.map((m) => ({
         id: m.id,
@@ -382,7 +381,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
             ? {
                 ...c,
                 online: isOnline,
-                lastSeen: isOnline ? null : lastSeen || c.lastSeen,
+                lastSeen: isOnline ? null : (lastSeen ?? c.lastSeen ?? null),
               }
             : c,
         ),
@@ -531,7 +530,8 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
         }
       }
 
-      const safeName = (participant.display_name || participant.handle || "Writer").trim() || "Writer";
+      const safeName =
+        (participant.display_name || participant.handle || "Writer").trim() || "Writer";
       const safeHandle = (participant.handle || "writer").trim() || "writer";
       const safeAvatar = participant.avatar_url || participant.profile_image || null;
 
@@ -599,7 +599,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
 
       // Save to Supabase backend
       void sendChatMessage({
-        conversationId: isValidUuid(convId) ? convId : undefined,
+        ...(isValidUuid(convId) ? { conversationId: convId } : {}),
         senderId: actualSenderId,
         receiverId: targetReceiver,
         content: body.trim(),
@@ -631,11 +631,11 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
           setActiveConvId((curr) => (curr === convId ? realConvId : curr));
           setMessages((prev) => {
             const currentList = prev[convId] ?? [];
-            const updatedList = currentList.map((m) =>
+            const updatedList: ChatMessage[] = currentList.map((m) =>
               m.id === optimisticId
                 ? {
                     ...m,
-                    status: dbMsg.is_seen ? "seen" : "delivered",
+                    status: (dbMsg.is_seen ? "seen" : "delivered") as MessageStatus,
                     id: dbMsg.id,
                     conversationId: realConvId,
                   }
@@ -647,9 +647,13 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
         } else {
           setMessages((prev) => ({
             ...prev,
-            [convId]: (prev[convId] ?? []).map((m) =>
+            [convId]: (prev[convId] ?? []).map((m): ChatMessage =>
               m.id === optimisticId
-                ? { ...m, status: dbMsg.is_seen ? "seen" : "delivered", id: dbMsg.id }
+                ? {
+                    ...m,
+                    status: (dbMsg.is_seen ? "seen" : "delivered") as MessageStatus,
+                    id: dbMsg.id,
+                  }
                 : m,
             ),
           }));
@@ -678,11 +682,16 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
   // ── WebRTC Calling Actions ──────────────────────────────────
   const startCall = useCallback(
     async (peerId: string, peerName: string, kind: "audio" | "video") => {
+      if (!currentUserId) {
+        toast.error("Please sign in to make calls.");
+        return;
+      }
+      const activeUserId = currentUserId;
       const generatedCallId = `call-${Date.now()}`;
       setCall({ phase: "outgoing", peerId, peerName, kind, callId: generatedCallId });
 
       // Save to DB
-      const dbCall = await createCallRecord(currentUserId, peerId, kind);
+      const dbCall = await createCallRecord(activeUserId, peerId, kind);
       const callId = dbCall?.id || generatedCallId;
 
       // Setup WebRTC
@@ -704,7 +713,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
       signalingRef.current = signaling;
 
       rtc.setSignalCallback((signal) => {
-        signaling.sendSignal(signal, currentUserId);
+        signaling.sendSignal(signal, activeUserId);
       });
 
       rtc.setRemoteStreamCallback((remoteStream) => {
@@ -735,6 +744,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
   const acceptCall = useCallback(async () => {
     if (call.phase !== "incoming") return;
     const { peerId, peerName, kind, callId } = call;
+    const activeUserId = currentUserId || "";
 
     await updateCallStatus(callId, "accepted");
 
@@ -756,7 +766,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
     signalingRef.current = signaling;
 
     rtc.setSignalCallback((signal) => {
-      signaling.sendSignal(signal, currentUserId);
+      signaling.sendSignal(signal, activeUserId);
     });
 
     rtc.setRemoteStreamCallback((remoteStream) => {
@@ -782,7 +792,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
     if (call.phase === "incoming") {
       await updateCallStatus(call.callId, "rejected");
       if (signalingRef.current) {
-        signalingRef.current.sendSignal({ type: "end" }, currentUserId);
+        signalingRef.current.sendSignal({ type: "end" }, currentUserId || "");
         signalingRef.current.leave();
       }
     }
@@ -794,7 +804,7 @@ function ChatProviderInner({ children }: { children: ReactNode }) {
     if (call.phase === "active" || call.phase === "outgoing") {
       await updateCallStatus((call as any).callId, "ended");
       if (signalingRef.current) {
-        signalingRef.current.sendSignal({ type: "end" }, currentUserId);
+        signalingRef.current.sendSignal({ type: "end" }, currentUserId || "");
         signalingRef.current.leave();
       }
     }
