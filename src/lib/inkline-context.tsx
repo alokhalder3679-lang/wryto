@@ -37,8 +37,24 @@ export function InklineProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [writers, setWriters] = useState<Writer[]>([]);
   const [liked, setLiked] = useState<Set<string>>(new Set());
-  const [followed, setFollowed] = useState<Set<string>>(new Set());
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<Session | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.user) return parsed as Session;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
   const [authInitialized, setAuthInitialized] = useState(false);
   const [profile, setProfile] = useState<Writer | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -118,6 +134,10 @@ export function InklineProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (mounted) setAuthInitialized(true);
+    }, 1000);
+
     supabase.auth
       .getSession()
       .then(({ data }) => {
@@ -132,6 +152,9 @@ export function InklineProvider({ children }: { children: ReactNode }) {
           setSession(null);
           setAuthInitialized(true);
         }
+      })
+      .finally(() => {
+        clearTimeout(safetyTimer);
       });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
@@ -143,7 +166,8 @@ export function InklineProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
+      clearTimeout(safetyTimer);
+      sub?.subscription?.unsubscribe();
     };
   }, []);
 
@@ -322,7 +346,18 @@ export function InklineProvider({ children }: { children: ReactNode }) {
         setUnreadCount(0);
       },
     }),
-    [posts, writers, liked, followed, session, authInitialized, profile, loading, unreadCount, refresh],
+    [
+      posts,
+      writers,
+      liked,
+      followed,
+      session,
+      authInitialized,
+      profile,
+      loading,
+      unreadCount,
+      refresh,
+    ],
   );
 
   return <InklineContext.Provider value={value}>{children}</InklineContext.Provider>;

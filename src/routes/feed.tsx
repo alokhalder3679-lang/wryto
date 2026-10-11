@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { PostCard, TopicChip } from "@/components/post-card";
+import { Button } from "@/components/ui/button";
 import { useInkline } from "@/lib/inkline-context";
 import { supabase } from "@/integrations/supabase/client";
 import { POST_SELECT, toPost, type Post } from "@/lib/inkline-data";
