@@ -1,31 +1,36 @@
 import { cn } from "@/lib/utils";
 
-interface WrytoLogoProps {
+export interface WrytoLogoProps {
   /**
-   * "full" = the complete brand mark with stylized feather, horizontal coral line and Wryto wordmark
+   * "full" = the complete brand mark banner with stylized feather and Wryto wordmark
    * "icon" = square 1:1 feather quill icon only
-   * "lockup" = 1:1 feather icon paired with modern typography
+   * "lockup" = feather quill mark paired with literary serif typography
+   * "editorial" = high-contrast literary serif masthead ("Wryto") paired with feather quill mark
    */
-  variant?: "full" | "icon" | "lockup";
-  /** Preset size variants */
+  variant?: "full" | "icon" | "lockup" | "editorial";
+  /** Preset size variants (xs = 24px icon, sm = 28px, md = 36px, lg = 48px, xl = 64px) */
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
   /** Whether to force dark theme background or transparent */
   theme?: "transparent" | "solid";
   priority?: boolean;
+  /** Optional edition or kicker subtitle for editorial mastheads */
+  subtitle?: string;
+  /** High contrast serif text override */
+  highContrast?: boolean;
 }
 
 export function WrytoIcon({
   className,
   size = "md",
   theme = "transparent",
-}: Omit<WrytoLogoProps, "variant">) {
+}: Omit<WrytoLogoProps, "variant" | "subtitle" | "highContrast">) {
   const sizeClasses = {
-    xs: "size-5",
-    sm: "size-7",
-    md: "size-9",
-    lg: "size-14",
-    xl: "size-20",
+    xs: "size-6", // 24px icon
+    sm: "size-7", // 28px icon
+    md: "size-9", // 36px icon
+    lg: "size-12", // 48px icon
+    xl: "size-16", // 64px icon
   };
 
   const src = theme === "solid" ? "/wryto-icon.png" : "/wryto-icon-transparent.png";
@@ -40,7 +45,7 @@ export function WrytoIcon({
     >
       <img
         src={src}
-        alt="Wryto icon"
+        alt="Wryto quill icon"
         className="size-full object-contain"
         loading="eager"
         decoding="async"
@@ -58,6 +63,8 @@ export function WrytoLogo({
   size = "md",
   theme = "transparent",
   className,
+  subtitle,
+  highContrast = true,
 }: WrytoLogoProps) {
   if (variant === "icon") {
     return <WrytoIcon size={size} theme={theme} className={className} />;
@@ -80,7 +87,7 @@ export function WrytoLogo({
         <img
           src={bannerSrc}
           alt="Wryto"
-          className="h-full w-auto max-w-full object-contain drop-shadow-sm"
+          className="h-full w-auto max-w-full object-contain drop-shadow-xs"
           loading="eager"
           decoding="async"
           onError={(e) => {
@@ -91,24 +98,47 @@ export function WrytoLogo({
     );
   }
 
-  // "lockup" variant: feather icon + clean modern typography
+  // "editorial" & "lockup" variants: quill icon paired with high-contrast literary serif typography
+  const gapClasses = {
+    xs: "ml-2",
+    sm: "ml-2.5",
+    md: "ml-3",
+    lg: "ml-3.5",
+    xl: "ml-4",
+  };
+
   const textClasses = {
-    xs: "text-sm ml-1.5",
-    sm: "text-base ml-2",
-    md: "text-xl ml-2.5",
-    lg: "text-3xl ml-3",
-    xl: "text-5xl ml-4",
+    xs: "text-lg",
+    sm: "text-xl",
+    md: "text-2xl",
+    lg: "text-4xl",
+    xl: "text-5xl md:text-6xl",
   };
 
   return (
     <div
       className={cn(
-        "inline-flex items-center select-none font-display font-semibold tracking-tight",
+        "inline-flex items-center select-none transition-colors",
         className,
       )}
     >
       <WrytoIcon size={size} theme={theme} />
-      <span className={cn("text-foreground", textClasses[size])}>Wryto</span>
+      <div className={cn("flex flex-col justify-center leading-none", gapClasses[size])}>
+        <span
+          className={cn(
+            "font-display font-bold tracking-tight text-foreground transition-colors",
+            highContrast && "text-foreground font-serif",
+            textClasses[size],
+          )}
+        >
+          Wryto
+        </span>
+        {subtitle && (
+          <span className="mt-1 font-sans text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">
+            {subtitle}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
