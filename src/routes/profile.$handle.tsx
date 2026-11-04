@@ -1,6 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LogOut, MapPin, MessageCircle, MoreHorizontal, Settings, UserX } from "lucide-react";
+import {
+  Camera,
+  Feather,
+  LogOut,
+  MapPin,
+  MessageCircle,
+  MoreHorizontal,
+  Settings,
+  UserX,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { FollowButton, PostCard } from "@/components/post-card";
@@ -88,16 +97,22 @@ export const Route = createFileRoute("/profile/$handle")({
 function ProfileErrorComponent() {
   return (
     <AppShell title="Profile">
-      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <h2 className="text-xl font-bold">Profile Unavailable</h2>
-        <p className="max-w-md text-sm text-muted-foreground">
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 my-auto min-h-[400px]">
+        <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">
+          Profile Unavailable
+        </h2>
+        <p className="max-w-md font-reading text-sm text-muted-foreground leading-relaxed">
           We couldn't load this writer's profile. Please try refreshing or return to the feed.
         </p>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => window.location.reload()}>
+          <Button
+            variant="outline"
+            onClick={() => window.location.reload()}
+            className="rounded-full min-h-[44px]"
+          >
             Refresh
           </Button>
-          <Button asChild>
+          <Button asChild className="rounded-full min-h-[44px]">
             <Link to="/feed">Go to Feed</Link>
           </Button>
         </div>
@@ -110,7 +125,7 @@ function ProfilePage() {
   const { handle } = Route.useParams();
   const { posts, profile: me, user, signOut, refresh } = useInkline();
   const { t } = useSettings();
-  const [tab, setTab] = useState("Pieces");
+  const [tab, setTab] = useState<"pieces" | "about">("pieces");
   const [writer, setWriter] = useState<Writer | null>(null);
   const [counts, setCounts] = useState({ followers: 0, following: 0 });
   const [blockModalOpen, setBlockModalOpen] = useState(false);
@@ -335,28 +350,32 @@ function ProfilePage() {
     }
   }
 
-  if (loading)
+  if (loading) {
     return (
       <AppShell title="Profile">
-        <div className="glass mx-4 mt-5 flex gap-5 rounded-2xl p-7 sm:mx-6">
-          <Skeleton className="size-24 rounded-full" />
-          <div className="flex-1 space-y-3 pt-2">
-            <Skeleton className="h-7 w-1/2" />
-            <Skeleton className="h-4 w-1/3" />
-            <Skeleton className="h-4 w-2/5" />
+        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+          <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start border-b border-border/60 pb-8">
+            <Skeleton className="size-20 sm:size-24 rounded-full" />
+            <div className="flex-1 space-y-3 pt-2 text-center sm:text-left">
+              <Skeleton className="h-8 w-48 mx-auto sm:mx-0" />
+              <Skeleton className="h-4 w-32 mx-auto sm:mx-0" />
+              <Skeleton className="h-4 w-3/4 mx-auto sm:mx-0" />
+            </div>
           </div>
         </div>
       </AppShell>
     );
-  if (loadError)
+  }
+
+  if (loadError) {
     return (
       <AppShell title="Profile">
-        <div className="px-6 py-20 text-center">
-          <p className="text-muted-foreground">Couldn't load this profile.</p>
+        <div className="mx-auto max-w-md px-6 py-20 text-center space-y-4">
+          <p className="font-reading text-muted-foreground">Couldn't load this writer profile.</p>
           <Button
-            className="mt-4"
             variant="outline"
             size="sm"
+            className="rounded-full min-h-[44px]"
             onClick={() => {
               setLoading(true);
               void load();
@@ -367,133 +386,240 @@ function ProfilePage() {
         </div>
       </AppShell>
     );
-  if (!writer)
+  }
+
+  if (!writer) {
     return (
       <AppShell title="Profile">
-        <p className="px-6 py-20 text-center text-muted-foreground">
-          No writer found with that handle.
-        </p>
+        <div className="mx-auto max-w-md px-6 py-20 text-center">
+          <p className="font-reading text-muted-foreground">No writer found with that handle.</p>
+          <Button asChild variant="outline" className="mt-4 rounded-full min-h-[44px]">
+            <Link to="/discover">Discover Writers</Link>
+          </Button>
+        </div>
       </AppShell>
     );
+  }
 
   const writerPosts = posts.filter((post) => post.author.handle === writer.handle);
-
   const topics = Array.from(new Set(writerPosts.flatMap((p) => p.tags))).slice(0, 12);
-  const section = "glass animate-rise mx-4 mt-5 rounded-2xl p-6 sm:mx-6 sm:p-7";
-  const h2 = "text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground";
 
   return (
     <AppShell title={writer.name}>
-      <section className={cn(section, "text-center sm:text-left")}>
-        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
-          <Avatar className="size-24 shrink-0 shadow-[var(--glass-shadow)] ring-4 ring-[var(--glass-border)]">
-            {avatarUrl && (
-              <AvatarImage src={avatarUrl} alt={writer.name} className="object-cover" />
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+        {/* Author Header */}
+        <header className="flex flex-col items-center gap-6 sm:flex-row sm:items-start text-center sm:text-left border-b border-border/60 pb-8">
+          {/* Avatar with optional change photo trigger if viewing own profile */}
+          <div className="relative group shrink-0">
+            <Avatar className="size-20 sm:size-24 ring-2 ring-border/70 shadow-xs">
+              {avatarUrl && (
+                <AvatarImage src={avatarUrl} alt={writer.name} className="object-cover" />
+              )}
+              <AvatarFallback className="bg-primary/10 text-primary font-display text-2xl font-bold">
+                {writer.initials}
+              </AvatarFallback>
+            </Avatar>
+            {isMe && (
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={busy}
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100 cursor-pointer"
+                title="Change profile photo"
+                aria-label="Change profile photo"
+              >
+                <Camera className="size-5" />
+              </button>
             )}
-            <AvatarFallback className="bg-accent text-2xl font-bold text-accent-foreground">
-              {writer.initials}
-            </AvatarFallback>
-          </Avatar>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void uploadAvatar(file);
+              }}
+            />
+          </div>
+
+          {/* Author Details & Bio */}
           <div className="min-w-0 flex-1">
             {editing ? (
-              <div className="space-y-3 text-left">
-                <Input
-                  value={form.handle}
-                  onChange={(e) =>
-                    setForm({ ...form, handle: e.target.value.toLowerCase().slice(0, 20) })
-                  }
-                  placeholder="username"
-                  aria-label="Username"
-                />
-                <Input
-                  value={form.display_name}
-                  onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-                  placeholder="Display name"
-                  aria-label="Display name"
-                />
-                <Textarea
-                  value={form.bio}
-                  onChange={(e) => setForm({ ...form, bio: e.target.value.slice(0, 280) })}
-                  placeholder="A short bio"
-                  aria-label="Bio"
-                />
-                <Input
-                  value={form.location}
-                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  placeholder="Location"
-                  aria-label="Location"
-                />
-                <input
-                  ref={fileInput}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) void uploadAvatar(file);
-                  }}
-                />
-                {formError && <p className="text-sm text-destructive">{formError}</p>}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => fileInput.current?.click()}
-                  >
-                    Upload photo
-                  </Button>
-                  <Button size="sm" disabled={busy} onClick={() => void save()}>
-                    {busy ? "Saving…" : "Save profile"}
-                  </Button>
+              /* Inline Profile Editor */
+              <div className="space-y-4 rounded-2xl border border-border/70 bg-card p-5 sm:p-6 text-left">
+                <div className="border-b border-border/50 pb-2">
+                  <h3 className="font-display text-lg font-bold text-foreground">Edit Profile</h3>
+                  <p className="text-xs font-sans text-muted-foreground">
+                    Update your public author persona and bio.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-sans font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                      Handle / Username
+                    </label>
+                    <Input
+                      value={form.handle}
+                      onChange={(e) =>
+                        setForm({ ...form, handle: e.target.value.toLowerCase().slice(0, 20) })
+                      }
+                      placeholder="username"
+                      aria-label="Username"
+                      className="h-10 text-sm font-sans"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-sans font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                      Display Name
+                    </label>
+                    <Input
+                      value={form.display_name}
+                      onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+                      placeholder="Display name"
+                      aria-label="Display name"
+                      className="h-10 text-sm font-sans"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-sans font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                      Author Biography
+                    </label>
+                    <Textarea
+                      value={form.bio}
+                      onChange={(e) => setForm({ ...form, bio: e.target.value.slice(0, 280) })}
+                      placeholder="Share a short note on your craft, themes, or life..."
+                      aria-label="Bio"
+                      className="min-h-[100px] text-sm font-reading leading-relaxed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-sans font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                      Location
+                    </label>
+                    <Input
+                      value={form.location}
+                      onChange={(e) => setForm({ ...form, location: e.target.value })}
+                      placeholder="City, Country"
+                      aria-label="Location"
+                      className="h-10 text-sm font-sans"
+                    />
+                  </div>
+
+                  {formError && (
+                    <p className="text-xs font-sans text-destructive py-1">{formError}</p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => fileInput.current?.click()}
+                      className="rounded-full min-h-[44px] sm:min-h-0 text-xs font-sans"
+                    >
+                      Upload new photo
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void save()}
+                      className="rounded-full min-h-[44px] sm:min-h-0 text-xs font-sans"
+                    >
+                      {busy ? "Saving…" : "Save changes"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setEditing(false)}
+                      className="rounded-full min-h-[44px] sm:min-h-0 text-xs font-sans"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (
               <>
-                <p className="text-3xl font-extrabold tracking-tight">{writer.name}</p>
-                <p className="mt-1 text-sm font-medium text-muted-foreground">
-                  Writer · @{writer.handle}
-                  {followsYou && (
-                    <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs">Follows you</span>
-                  )}
-                </p>
-                <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground sm:justify-start">
+                <div className="space-y-1">
+                  <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
+                    {writer.name}
+                  </h1>
+                  <p className="text-sm font-sans text-muted-foreground flex items-center justify-center sm:justify-start gap-2">
+                    <span>@{writer.handle}</span>
+                    {followsYou && (
+                      <span className="rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-xs font-sans text-muted-foreground font-normal">
+                        Follows you
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {writer.bio && (
+                  <p className="mt-3 font-reading text-base leading-relaxed max-w-2xl text-foreground/90">
+                    {writer.bio}
+                  </p>
+                )}
+
+                {/* Metadata & Follower Counts */}
+                <div className="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2 text-sm font-sans text-muted-foreground">
                   {writer.location && (
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="size-4" /> {writer.location}
+                    <span className="flex items-center gap-1.5 text-xs sm:text-sm">
+                      <MapPin className="size-3.5 text-primary/70 shrink-0" />
+                      <span>{writer.location}</span>
                     </span>
                   )}
                   <button
                     type="button"
-                    className="hover:text-foreground"
                     onClick={() => void openList("followers")}
+                    className="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 text-xs sm:text-sm hover:text-foreground transition-colors cursor-pointer"
                   >
-                    <strong className="text-foreground">{counts.followers}</strong> followers
+                    <strong className="font-semibold text-foreground">{counts.followers}</strong>{" "}
+                    followers
                   </button>
                   <button
                     type="button"
-                    className="hover:text-foreground"
                     onClick={() => void openList("following")}
+                    className="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 text-xs sm:text-sm hover:text-foreground transition-colors cursor-pointer"
                   >
-                    <strong className="text-foreground">{counts.following}</strong> following
+                    <strong className="font-semibold text-foreground">{counts.following}</strong>{" "}
+                    following
                   </button>
                 </div>
+
                 {mutual && (
-                  <div className="mt-2">
+                  <div className="mt-3">
                     <MutualLine {...mutual} />
                   </div>
                 )}
               </>
             )}
           </div>
-          <div className="shrink-0 flex items-center gap-2">
+
+          {/* Action Buttons */}
+          <div className="shrink-0 flex items-center gap-2 pt-1 sm:pt-0">
             {isMe ? (
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
-                  {editing ? t("cancel") : "Edit profile"}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(!editing)}
+                  className="rounded-full min-h-[44px] sm:min-h-0 px-4 text-xs font-sans font-medium cursor-pointer"
+                >
+                  {editing ? t("cancel") : "Edit Profile"}
                 </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/settings" className="gap-1.5">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full min-h-[44px] sm:min-h-0 px-3.5 text-xs font-sans font-medium gap-1.5 cursor-pointer"
+                >
+                  <Link to="/settings">
                     <Settings className="size-3.5" />
                     <span>Settings</span>
                   </Link>
@@ -501,7 +627,7 @@ function ProfilePage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-muted-foreground hover:text-destructive gap-1.5"
+                  className="rounded-full min-h-[44px] sm:min-h-0 px-3 text-xs font-sans text-muted-foreground hover:text-destructive gap-1.5 cursor-pointer"
                   onClick={async () => {
                     await signOut();
                     await navigate({ to: "/auth", replace: true });
@@ -512,13 +638,13 @@ function ProfilePage() {
                 </Button>
               </div>
             ) : (
-              <>
+              <div className="flex items-center gap-2">
                 <FollowButton handle={writer.handle} />
                 <Button
                   asChild
                   variant="outline"
                   size="sm"
-                  className="h-9 gap-1.5 rounded-xl px-3 text-xs font-semibold"
+                  className="rounded-full min-h-[44px] sm:min-h-0 px-3.5 text-xs font-sans font-medium gap-1.5 border-border/80 cursor-pointer"
                 >
                   <Link to="/messages" search={{ user: writer.id, handle: writer.handle }}>
                     <MessageCircle className="size-3.5" />
@@ -530,25 +656,153 @@ function ProfilePage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="size-9 rounded-xl text-muted-foreground hover:text-foreground"
+                      className="size-9 rounded-full min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 border-border/80 text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="glass w-40 rounded-xl">
+                  <DropdownMenuContent align="end" className="w-40 rounded-xl bg-card border-border/80 shadow-md">
                     <DropdownMenuItem
                       onClick={() => setBlockModalOpen(true)}
-                      className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                      className="cursor-pointer gap-2 text-destructive focus:text-destructive text-xs font-sans"
                     >
                       <UserX className="size-4" />
                       <span>{t("block")}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </>
+              </div>
             )}
           </div>
-        </div>
+        </header>
+
+        {/* Minimal Ink Underline Tab Navigation */}
+        <nav aria-label="Profile navigation" className="border-b border-border/60">
+          <div className="flex items-center gap-8">
+            <button
+              type="button"
+              onClick={() => setTab("pieces")}
+              className={cn(
+                "relative pb-3 text-sm font-sans font-medium transition-colors min-h-[44px] flex items-center cursor-pointer",
+                tab === "pieces"
+                  ? "text-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <span>Published Pieces</span>
+              <span className="ml-2 rounded-full bg-muted/60 px-2 py-0.5 text-xs font-sans text-muted-foreground font-normal">
+                {writerPosts.length}
+              </span>
+              {tab === "pieces" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTab("about")}
+              className={cn(
+                "relative pb-3 text-sm font-sans font-medium transition-colors min-h-[44px] flex items-center cursor-pointer",
+                tab === "about"
+                  ? "text-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <span>About</span>
+              {tab === "about" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+              )}
+            </button>
+          </div>
+        </nav>
+
+        {/* Tab 1: Published Pieces */}
+        {tab === "pieces" && (
+          <section className="space-y-6">
+            {writerPosts.length > 0 ? (
+              <div className="divide-y divide-border/40">
+                {writerPosts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
+            ) : (
+              <div className="mx-auto max-w-md px-6 py-16 text-center">
+                <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-6 ring-1 ring-primary/20">
+                  <Feather className="size-6 stroke-[1.75]" />
+                </div>
+                <blockquote className="font-display italic text-lg sm:text-xl text-foreground/90 leading-relaxed">
+                  “The scariest moment is always just before you start.”
+                </blockquote>
+                <p className="mt-2 text-xs font-sans tracking-widest uppercase text-primary font-medium">
+                  — Stephen King
+                </p>
+                <p className="mt-4 font-reading text-sm text-muted-foreground leading-relaxed">
+                  {isMe
+                    ? "You haven't published any pieces yet. Share your first essay, poem, or story."
+                    : "This author hasn't published any pieces yet."}
+                </p>
+                {isMe && (
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      asChild
+                      className="rounded-full px-6 py-2 text-xs font-sans font-medium min-h-[44px] flex items-center cursor-pointer"
+                    >
+                      <Link to="/create">Write a Piece</Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Tab 2: About the Author */}
+        {tab === "about" && (
+          <section className="space-y-8 rounded-2xl border border-border/70 bg-card p-6 sm:p-8">
+            <div>
+              <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-primary">
+                Biography
+              </h2>
+              <p className="mt-3 font-reading text-base sm:text-lg leading-relaxed text-foreground/90">
+                {writer.bio || "This writer has not added a detailed biography yet."}
+              </p>
+            </div>
+
+            {topics.length > 0 && (
+              <div className="border-t border-border/50 pt-6">
+                <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-primary">
+                  Themes & Topics
+                </h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {topics.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full border border-border/60 bg-muted/40 px-3.5 py-1 text-xs font-sans font-medium text-foreground/80"
+                    >
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-border/50 pt-6 space-y-3 text-sm font-sans text-muted-foreground">
+              <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-primary">
+                Dispatches Archive
+              </h2>
+              <p className="font-reading text-sm text-muted-foreground">
+                Total published pieces:{" "}
+                <strong className="font-semibold text-foreground">{writerPosts.length}</strong>
+              </p>
+              {writer.location && (
+                <p className="font-reading text-sm text-muted-foreground flex items-center gap-1.5">
+                  <MapPin className="size-3.5 text-primary/70 shrink-0" />
+                  <span>Based in {writer.location}</span>
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Block Confirmation Modal */}
         {writer && (
@@ -560,114 +814,76 @@ function ProfilePage() {
             onOpenChange={setBlockModalOpen}
           />
         )}
-      </section>
 
-      {!editing && (
-        <section className={section}>
-          <h2 className={h2}>About</h2>
-          <p className="mt-3 font-reading text-lg leading-8">
-            {writer.bio || "This writer hasn't added a bio yet."}
-          </p>
-          {topics.length > 0 && (
-            <>
-              <h2 className={cn(h2, "mt-6")}>Writes about</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {topics.map((t) => (
-                  <span key={t} className="glass rounded-full px-3 py-1 text-xs font-medium">
-                    #{t}
-                  </span>
+        {/* Followers / Following Dialog */}
+        <Dialog open={!!list} onOpenChange={(o) => !o && setList(null)}>
+          <DialogContent className="sm:max-w-md bg-card border-border/80 rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl font-bold">
+                {list === "followers" ? "Followers" : "Following"}
+              </DialogTitle>
+            </DialogHeader>
+            {listState === "loading" ? (
+              <div className="space-y-3 py-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="size-10 rounded-full" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
                 ))}
               </div>
-            </>
-          )}
-        </section>
-      )}
-
-      <section className={section}>
-        <div className="flex items-center justify-between gap-4">
-          <h2 className={h2}>Writing timeline</h2>
-          <div className="flex gap-1 rounded-full bg-muted p-1">
-            {["Pieces", "Responses"].map((item) => (
-              <button
-                key={item}
-                onClick={() => setTab(item)}
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-                  tab === item
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground",
-                )}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
-        {tab === "Pieces" && writerPosts.length > 0 ? (
-          <ol className="relative mt-5 ml-2 border-l border-border">
-            {writerPosts.map((post) => (
-              <li key={post.id} className="relative pl-3">
-                <span className="absolute -left-[5px] top-10 size-2.5 rounded-full bg-primary ring-4 ring-background" />
-                <div className="-mx-2 sm:-mx-4 [&_article]:mx-2 sm:[&_article]:mx-4">
-                  <PostCard post={post} />
-                </div>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="py-12 text-center text-muted-foreground">
-            {tab === "Pieces" ? "No published pieces yet." : "No responses yet."}
-          </p>
-        )}
-      </section>
-      <Dialog open={!!list} onOpenChange={(o) => !o && setList(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{list === "followers" ? "Followers" : "Following"}</DialogTitle>
-          </DialogHeader>
-          {listState === "loading" ? (
-            <div className="space-y-2 py-2">
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="h-9 w-full" />
-              ))}
-            </div>
-          ) : listState === "error" ? (
-            <p className="py-6 text-center text-sm text-destructive">Couldn't load this list.</p>
-          ) : people.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No one here yet.</p>
-          ) : (
-            <ul className="max-h-80 space-y-1 overflow-y-auto">
-              {people.map((p) => (
-                <li key={p.handle}>
-                  <Link
-                    to="/profile/$handle"
-                    params={{ handle: p.handle }}
-                    onClick={() => setList(null)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted"
-                  >
-                    <Avatar className="size-9 shrink-0">
-                      {getAvatarUrl(p.avatar_url) && (
-                        <AvatarImage
-                          src={getAvatarUrl(p.avatar_url)!}
-                          alt={p.display_name}
-                          className="object-cover"
-                        />
-                      )}
-                      <AvatarFallback className="bg-accent text-xs font-semibold">
-                        {initialsOf(p.display_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{p.display_name}</p>
-                      <p className="truncate text-xs text-muted-foreground">@{p.handle}</p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </DialogContent>
-      </Dialog>
+            ) : listState === "error" ? (
+              <p className="py-6 text-center font-reading text-sm text-destructive">
+                Couldn't load this list.
+              </p>
+            ) : people.length === 0 ? (
+              <p className="py-6 text-center font-reading text-sm text-muted-foreground">
+                No one here yet.
+              </p>
+            ) : (
+              <ul className="max-h-80 space-y-1 overflow-y-auto divide-y divide-border/30">
+                {people.map((p) => {
+                  const avatarSrc = getAvatarUrl(p.avatar_url);
+                  return (
+                    <li key={p.handle} className="pt-1 first:pt-0">
+                      <Link
+                        to="/profile/$handle"
+                        params={{ handle: p.handle }}
+                        onClick={() => setList(null)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50 min-h-[44px]"
+                      >
+                        <Avatar className="size-10 shrink-0 ring-1 ring-border/50">
+                          {avatarSrc && (
+                            <AvatarImage
+                              src={avatarSrc}
+                              alt={p.display_name}
+                              className="object-cover"
+                            />
+                          )}
+                          <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                            {initialsOf(p.display_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-display text-sm font-semibold text-foreground">
+                            {p.display_name}
+                          </p>
+                          <p className="truncate text-xs font-sans text-muted-foreground">
+                            @{p.handle}
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
     </AppShell>
   );
 }
