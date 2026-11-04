@@ -37,7 +37,7 @@ function NotificationsErrorComponent() {
         <p className="max-w-md text-sm text-muted-foreground font-sans">
           There was a problem loading your notification stream. Please try refreshing.
         </p>
-        <Button onClick={() => window.location.reload()} className="rounded-full">Refresh</Button>
+        <Button onClick={() => window.location.reload()} className="rounded-xl min-h-[44px]">Refresh</Button>
       </div>
     </AppShell>
   );
@@ -101,16 +101,13 @@ function NotificationsPage() {
 
   useEffect(() => {
     void load();
-  }, [load]);
-
-  useEffect(() => {
     if (!user) return;
     const channel = supabase
-      .channel(`notifications-live-${user.id}`)
+      .channel(`notifications-feed-${user.id}`)
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "notifications",
           filter: `recipient_id=eq.${user.id}`,
@@ -155,32 +152,31 @@ function NotificationsPage() {
           variant="ghost"
           size="sm"
           onClick={() => void markAllRead()}
-          className="text-xs font-sans font-semibold text-primary hover:text-primary gap-1"
+          className="text-xs font-semibold text-primary hover:text-primary gap-1.5 spring-press rounded-xl min-h-[36px]"
         >
           <CheckCheck className="size-3.5" />
           <span>Mark all read</span>
         </Button>
       }
     >
-      {/* ── Filter Tabs ───────────────────────────────────────── */}
-      <div className="flex border-b border-border/70 bg-background/85 backdrop-blur-md sticky top-0 z-20">
-        {filterTabs.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setFilter(item.id)}
-            className={cn(
-              "flex-1 py-3 text-center text-xs sm:text-sm font-sans font-semibold transition-colors relative cursor-pointer",
-              filter === item.id
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/30",
-            )}
-          >
-            <span>{item.label}</span>
-            {filter === item.id && (
-              <span className="absolute bottom-0 inset-x-8 h-1 bg-primary rounded-full" />
-            )}
-          </button>
-        ))}
+      {/* ── Apple Liquid Glass Segmented Filter Bar ───────────────────────── */}
+      <div className="sticky top-0 z-20 liquid-glass border-b border-border/60 p-2">
+        <div className="flex p-1 rounded-2xl bg-muted/60 border border-border/50 max-w-md mx-auto">
+          {filterTabs.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setFilter(item.id)}
+              className={cn(
+                "flex-1 py-1.5 text-center text-xs sm:text-sm rounded-xl transition-all spring-press cursor-pointer",
+                filter === item.id
+                  ? "bg-card text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Notifications Stream ──────────────────────────────── */}
@@ -204,13 +200,13 @@ function NotificationsPage() {
               key={item.id}
               to={destination}
               className={cn(
-                "flex items-center gap-3.5 p-4 hover:bg-muted/20 transition-colors block relative",
-                !item.isRead && "bg-primary/4",
+                "flex items-center gap-3.5 p-4 sm:p-5 hover:bg-muted/30 transition-all block relative",
+                !item.isRead && "bg-primary/5",
               )}
             >
               {/* Actor Avatar with Icon Badge */}
               <div className="relative shrink-0">
-                <Avatar className="size-10 ring-1 ring-border">
+                <Avatar className="size-10 ring-1 ring-border shadow-2xs">
                   {getAvatarUrl(item.actorAvatar) && (
                     <AvatarImage src={getAvatarUrl(item.actorAvatar)!} alt={item.actor} />
                   )}
@@ -220,23 +216,23 @@ function NotificationsPage() {
                 </Avatar>
                 <div
                   className={cn(
-                    "absolute -bottom-1 -right-1 size-5 rounded-full flex items-center justify-center ring-2 ring-background",
+                    "absolute -bottom-1 -right-1 size-5 rounded-full flex items-center justify-center ring-2 ring-background shadow-xs",
                     isLike && "bg-rose-500 text-white",
-                    isComment && "bg-blue-500 text-white",
-                    isFollow && "bg-primary text-primary-foreground",
+                    isComment && "bg-primary text-primary-foreground",
+                    isFollow && "bg-foreground text-background",
                   )}
                 >
-                  <ActionIcon className="size-3 stroke-[2]" />
+                  <ActionIcon className="size-3 stroke-[2.5]" />
                 </div>
               </div>
 
               {/* Notification Body */}
-              <div className="flex-1 min-w-0 font-sans text-xs sm:text-sm">
+              <div className="flex-1 min-w-0 text-xs sm:text-sm">
                 <p className="text-foreground leading-snug">
                   <span className="font-bold hover:underline">{item.actor}</span>{" "}
                   <span className="text-muted-foreground">{actionText}</span>
                 </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">{item.time}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 tabular-numbers">{item.time}</p>
               </div>
 
               {/* Follow Button if follower notification */}
@@ -248,7 +244,7 @@ function NotificationsPage() {
 
               {/* Unread Indicator Dot */}
               {!item.isRead && (
-                <span className="size-2 rounded-full bg-primary shrink-0 ml-1" />
+                <span className="size-2 rounded-full bg-primary shrink-0 ml-1 shadow-2xs" />
               )}
             </Link>
           );
@@ -256,11 +252,11 @@ function NotificationsPage() {
 
         {!visible.length && (
           <div className="py-20 text-center px-6 space-y-3">
-            <div className="size-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+            <div className="size-12 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto text-muted-foreground">
               <Bell className="size-6" />
             </div>
-            <h3 className="font-sans text-base font-bold text-foreground">No notifications yet</h3>
-            <p className="font-sans text-xs text-muted-foreground max-w-sm mx-auto">
+            <h3 className="text-base font-bold text-foreground">No notifications yet</h3>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
               When someone likes your posts, leaves a comment, or follows you, you'll see it here.
             </p>
           </div>

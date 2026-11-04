@@ -3,14 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   Calendar,
   Camera,
-  LogOut,
   MapPin,
   MessageCircle,
   MoreHorizontal,
   Pencil,
   Settings,
   UserX,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -81,10 +79,10 @@ function ProfileErrorComponent() {
           We couldn't load this profile. Please try refreshing or return to the feed.
         </p>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => window.location.reload()} className="rounded-full">
+          <Button variant="outline" onClick={() => window.location.reload()} className="rounded-xl min-h-[44px]">
             Refresh
           </Button>
-          <Button asChild className="rounded-full">
+          <Button asChild className="rounded-xl min-h-[44px]">
             <Link to="/feed">Go to Home</Link>
           </Button>
         </div>
@@ -95,7 +93,7 @@ function ProfileErrorComponent() {
 
 function ProfilePage() {
   const { handle } = Route.useParams();
-  const { posts, profile: me, user, signOut, refresh } = useInkline();
+  const { posts, profile: me, user, refresh } = useInkline();
   const { t } = useSettings();
   const [tab, setTab] = useState<"posts" | "about">("posts");
   const [writer, setWriter] = useState<Writer | null>(null);
@@ -149,7 +147,6 @@ function ProfilePage() {
       location: w.location ?? "",
     });
 
-    // Check if this user follows the logged-in user
     if (user && w.id !== user.id) {
       const { data: followRel } = await supabase
         .from("followers")
@@ -338,7 +335,7 @@ function ProfilePage() {
           <p className="text-sm text-muted-foreground font-sans">
             This account doesn't exist or may have changed their username.
           </p>
-          <Button asChild className="rounded-full text-xs font-semibold mt-3" size="sm">
+          <Button asChild className="rounded-xl text-xs font-semibold mt-3 min-h-[44px]" size="sm">
             <Link to="/feed">Return to Feed</Link>
           </Button>
         </div>
@@ -348,13 +345,13 @@ function ProfilePage() {
 
   return (
     <AppShell title={writer.name}>
-      {/* ── Profile Cover Banner ──────────────────────────────── */}
-      <div className="h-32 sm:h-44 w-full bg-gradient-to-r from-primary/20 via-primary/10 to-accent/25 relative border-b border-border/70">
+      {/* ── Profile Cover Banner (Subtle Liquid Glow) ──────────────── */}
+      <div className="h-32 sm:h-44 w-full bg-gradient-to-r from-primary/15 via-primary/8 to-accent/20 relative border-b border-border/60">
         <div className="absolute inset-0 bg-radial-gradient from-transparent to-black/5" />
       </div>
 
       {/* ── Profile Details Section ───────────────────────────── */}
-      <div className="px-4 sm:px-6 pb-4 border-b border-border/70 space-y-4">
+      <div className="px-4 sm:px-6 pb-4 border-b border-border/60 space-y-4">
         {/* Avatar & Action Row */}
         <div className="flex items-end justify-between -mt-12 sm:-mt-16">
           <div className="relative group">
@@ -362,7 +359,7 @@ function ProfilePage() {
               {getAvatarUrl(avatarUrl) && (
                 <AvatarImage src={getAvatarUrl(avatarUrl)!} alt={writer.name} className="object-cover" />
               )}
-              <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold font-sans">
+              <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
                 {initialsOf(writer.name)}
               </AvatarFallback>
             </Avatar>
@@ -395,7 +392,7 @@ function ProfilePage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setEditing(true)}
-                  className="rounded-full px-4 font-semibold text-xs h-8 border-border/80"
+                  className="rounded-xl px-4 font-semibold text-xs min-h-[36px] border-border/80 spring-press"
                 >
                   <Pencil className="size-3.5 mr-1.5" />
                   Edit Profile
@@ -404,7 +401,7 @@ function ProfilePage() {
                   asChild
                   variant="ghost"
                   size="icon"
-                  className="size-8 rounded-full text-muted-foreground hover:text-foreground"
+                  className="size-9 rounded-xl text-muted-foreground hover:text-foreground spring-press"
                 >
                   <Link to="/settings">
                     <Settings className="size-4" />
@@ -418,7 +415,7 @@ function ProfilePage() {
                   asChild
                   variant="outline"
                   size="sm"
-                  className="rounded-full text-xs font-semibold h-8 px-3 border-border/80"
+                  className="rounded-xl text-xs font-semibold min-h-[36px] px-3.5 border-border/80 spring-press"
                 >
                   <Link
                     to="/messages"
@@ -431,14 +428,14 @@ function ProfilePage() {
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8 rounded-full text-muted-foreground">
+                    <Button variant="ghost" size="icon" className="size-9 rounded-xl text-muted-foreground spring-press">
                       <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                  <DropdownMenuContent align="end" className="w-44 rounded-2xl liquid-glass p-1">
                     <DropdownMenuItem
                       onClick={() => setBlockModalOpen(true)}
-                      className="cursor-pointer gap-2 text-xs font-sans text-destructive"
+                      className="cursor-pointer gap-2 text-xs rounded-xl px-2.5 py-2 text-destructive focus:text-destructive focus:bg-destructive/10"
                     >
                       <UserX className="size-3.5" />
                       <span>Block @{writer.handle}</span>
@@ -453,17 +450,17 @@ function ProfilePage() {
         {/* Identity & Bio */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-sans text-xl font-bold text-foreground">{writer.name}</h1>
+            <h1 className="text-xl font-bold text-foreground">{writer.name}</h1>
             {followsYou && (
-              <span className="px-2 py-0.5 rounded-md bg-muted text-[10px] font-semibold text-muted-foreground font-sans">
+              <span className="px-2 py-0.5 rounded-lg bg-muted text-[10px] font-semibold text-muted-foreground">
                 Follows you
               </span>
             )}
           </div>
-          <p className="font-sans text-xs text-muted-foreground">@{writer.handle}</p>
+          <p className="text-xs text-muted-foreground font-mono">@{writer.handle}</p>
 
           {writer.bio && (
-            <p className="font-sans text-sm text-foreground/90 leading-relaxed pt-1 max-w-xl">
+            <p className="text-sm text-foreground/90 leading-relaxed pt-1 max-w-xl">
               {writer.bio}
             </p>
           )}
@@ -476,8 +473,8 @@ function ProfilePage() {
           )}
         </div>
 
-        {/* Social Stats Counters */}
-        <div className="flex items-center gap-5 pt-1 text-xs font-sans">
+        {/* Social Stats Counters (Apple Tabular Figures) */}
+        <div className="flex items-center gap-5 pt-1 text-xs tabular-numbers">
           <div>
             <span className="font-bold text-foreground mr-1">{authorPosts.length}</span>
             <span className="text-muted-foreground">Posts</span>
@@ -485,7 +482,7 @@ function ProfilePage() {
           <button
             type="button"
             onClick={() => void openList("following")}
-            className="hover:underline cursor-pointer"
+            className="hover:underline cursor-pointer spring-press"
           >
             <span className="font-bold text-foreground mr-1">{counts.following}</span>
             <span className="text-muted-foreground">Following</span>
@@ -493,7 +490,7 @@ function ProfilePage() {
           <button
             type="button"
             onClick={() => void openList("followers")}
-            className="hover:underline cursor-pointer"
+            className="hover:underline cursor-pointer spring-press"
           >
             <span className="font-bold text-foreground mr-1">{counts.followers}</span>
             <span className="text-muted-foreground">Followers</span>
@@ -501,49 +498,45 @@ function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Sticky Tab Navigation ─────────────────────────────── */}
-      <div className="sticky top-0 z-20 flex border-b border-border/70 bg-background/85 backdrop-blur-md">
-        <button
-          type="button"
-          onClick={() => setTab("posts")}
-          className={cn(
-            "flex-1 py-3 text-center text-sm font-sans transition-colors relative cursor-pointer",
-            tab === "posts"
-              ? "font-bold text-foreground"
-              : "font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30",
-          )}
-        >
-          <span>Posts ({authorPosts.length})</span>
-          {tab === "posts" && (
-            <span className="absolute bottom-0 inset-x-12 h-1 bg-primary rounded-full" />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("about")}
-          className={cn(
-            "flex-1 py-3 text-center text-sm font-sans transition-colors relative cursor-pointer",
-            tab === "about"
-              ? "font-bold text-foreground"
-              : "font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30",
-          )}
-        >
-          <span>About</span>
-          {tab === "about" && (
-            <span className="absolute bottom-0 inset-x-12 h-1 bg-primary rounded-full" />
-          )}
-        </button>
+      {/* ── Apple Liquid Glass Segmented Tab Bar ─────────────── */}
+      <div className="sticky top-0 z-20 liquid-glass border-b border-border/60 p-2">
+        <div className="flex p-1 rounded-2xl bg-muted/60 border border-border/50 max-w-md mx-auto">
+          <button
+            type="button"
+            onClick={() => setTab("posts")}
+            className={cn(
+              "flex-1 py-1.5 text-center text-xs sm:text-sm rounded-xl transition-all spring-press cursor-pointer",
+              tab === "posts"
+                ? "bg-card text-foreground font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <span>Posts ({authorPosts.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("about")}
+            className={cn(
+              "flex-1 py-1.5 text-center text-xs sm:text-sm rounded-xl transition-all spring-press cursor-pointer",
+              tab === "about"
+                ? "bg-card text-foreground font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <span>About</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Tab Content Stream ────────────────────────────────── */}
       {tab === "posts" ? (
         authorPosts.length === 0 ? (
           <div className="py-16 text-center px-6 space-y-2">
-            <p className="font-sans text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               @{writer.handle} hasn't published any posts yet.
             </p>
             {isMe && (
-              <Button asChild size="sm" className="rounded-full text-xs font-semibold mt-2">
+              <Button asChild size="sm" className="rounded-xl text-xs font-semibold mt-2 min-h-[40px]">
                 <Link to="/create">Write Your First Post</Link>
               </Button>
             )}
@@ -558,16 +551,16 @@ function ProfilePage() {
       ) : (
         /* About Tab */
         <div className="p-6 space-y-6">
-          <div className="rounded-2xl border border-border/70 p-5 bg-card space-y-3">
-            <h3 className="font-sans text-sm font-bold text-foreground">Biography</h3>
-            <p className="font-sans text-sm text-muted-foreground leading-relaxed">
+          <div className="rounded-3xl border border-border/80 p-5 bg-card/85 backdrop-blur-md space-y-3 shadow-xs">
+            <h3 className="text-sm font-bold text-foreground">Biography</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {writer.bio || "No biography provided yet."}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border/70 p-5 bg-card space-y-2">
-            <h3 className="font-sans text-sm font-bold text-foreground">Details</h3>
-            <div className="text-xs font-sans text-muted-foreground space-y-1.5">
+          <div className="rounded-3xl border border-border/80 p-5 bg-card/85 backdrop-blur-md space-y-2 shadow-xs">
+            <h3 className="text-sm font-bold text-foreground">Details</h3>
+            <div className="text-xs text-muted-foreground space-y-1.5 font-mono">
               <p>Username: @{writer.handle}</p>
               {writer.location && <p>Location: {writer.location}</p>}
               <p>Author ID: {writer.id}</p>
@@ -578,62 +571,62 @@ function ProfilePage() {
 
       {/* ── Edit Profile Modal ────────────────────────────────── */}
       <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-md rounded-3xl liquid-glass">
           <DialogHeader>
-            <DialogTitle className="font-sans font-bold text-lg">Edit Profile</DialogTitle>
+            <DialogTitle className="font-bold text-lg">Edit Profile</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-sans font-semibold text-muted-foreground mb-1 block">
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block uppercase tracking-wider">
                 Display Name
               </label>
               <Input
                 value={form.display_name}
                 maxLength={50}
                 onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-                className="rounded-xl"
+                className="rounded-xl min-h-[44px]"
               />
             </div>
             <div>
-              <label className="text-xs font-sans font-semibold text-muted-foreground mb-1 block">
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block uppercase tracking-wider">
                 Username
               </label>
               <Input
                 value={form.handle}
                 maxLength={20}
                 onChange={(e) => setForm({ ...form, handle: e.target.value })}
-                className="rounded-xl"
+                className="rounded-xl min-h-[44px] font-mono"
               />
             </div>
             <div>
-              <label className="text-xs font-sans font-semibold text-muted-foreground mb-1 block">
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block uppercase tracking-wider">
                 Bio
               </label>
               <Textarea
                 value={form.bio}
                 maxLength={240}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                className="rounded-xl min-h-[90px]"
+                className="rounded-xl min-h-[90px] resize-none"
               />
             </div>
             <div>
-              <label className="text-xs font-sans font-semibold text-muted-foreground mb-1 block">
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block uppercase tracking-wider">
                 Location
               </label>
               <Input
                 value={form.location}
                 maxLength={40}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
-                className="rounded-xl"
+                className="rounded-xl min-h-[44px]"
               />
             </div>
-            {formError && <p className="text-xs text-destructive font-sans">{formError}</p>}
+            {formError && <p className="text-xs text-destructive">{formError}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setEditing(false)}
-                className="rounded-full"
+                className="rounded-xl min-h-[40px] spring-press"
               >
                 Cancel
               </Button>
@@ -641,7 +634,7 @@ function ProfilePage() {
                 size="sm"
                 onClick={() => void save()}
                 disabled={busy}
-                className="rounded-full font-semibold px-5"
+                className="rounded-xl font-semibold px-5 min-h-[40px] spring-press shadow-xs"
               >
                 {busy ? "Saving…" : "Save Changes"}
               </Button>
@@ -652,9 +645,9 @@ function ProfilePage() {
 
       {/* ── Followers / Following Modal ───────────────────────── */}
       <Dialog open={list !== null} onOpenChange={(open) => !open && setList(null)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-md rounded-3xl liquid-glass">
           <DialogHeader>
-            <DialogTitle className="font-sans font-bold capitalize text-base">
+            <DialogTitle className="font-bold capitalize text-base">
               {list} ({people.length})
             </DialogTitle>
           </DialogHeader>
@@ -664,34 +657,34 @@ function ProfilePage() {
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex items-center gap-3">
                     <Skeleton className="size-10 rounded-full" />
-                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-32 rounded-md" />
                   </div>
                 ))}
               </div>
             ) : people.length === 0 ? (
-              <p className="p-6 text-center text-xs text-muted-foreground font-sans">
+              <p className="p-6 text-center text-xs text-muted-foreground">
                 No users found.
               </p>
             ) : (
               people.map((person) => (
-                <div key={person.handle} className="flex items-center justify-between p-3">
+                <div key={person.handle} className="flex items-center justify-between p-3 rounded-2xl hover:bg-muted/40 transition-colors">
                   <Link
                     to="/profile/$handle"
                     params={{ handle: person.handle }}
                     onClick={() => setList(null)}
                     className="flex items-center gap-2.5 min-w-0 flex-1 hover:underline"
                   >
-                    <Avatar className="size-9 ring-1 ring-border">
+                    <Avatar className="size-9 ring-1 ring-border shadow-2xs">
                       {getAvatarUrl(person.avatar_url) && (
                         <AvatarImage src={getAvatarUrl(person.avatar_url)!} alt={person.display_name} />
                       )}
-                      <AvatarFallback className="text-xs font-bold font-sans">
+                      <AvatarFallback className="text-xs font-bold">
                         {initialsOf(person.display_name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-foreground truncate">{person.display_name}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">@{person.handle}</p>
+                      <p className="text-[11px] text-muted-foreground truncate font-mono">@{person.handle}</p>
                     </div>
                   </Link>
                   <FollowButton handle={person.handle} />

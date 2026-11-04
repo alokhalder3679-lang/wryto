@@ -2,7 +2,6 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ProfilePreview } from "@/components/profile-preview";
 import {
   Bookmark,
-  Check,
   ChevronDown,
   ChevronUp,
   Flag,
@@ -75,32 +74,6 @@ export function toggleBookmark(id: string): boolean {
   return next;
 }
 
-export function ClapIcon({
-  className = "size-4",
-  filled = false,
-}: {
-  className?: string;
-  filled?: boolean;
-}) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <g stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none">
-        <path d="M5.5 4.5l1.5 1.5" />
-        <path d="M3 8h2" />
-        <path d="M8 2.5v2" />
-      </g>
-      <path
-        d="M14.5 4.5a2 2 0 0 0-2.8 0L9.8 6.4a2 2 0 0 0-.6 1.4v4.7l-2.1-2.1a2 2 0 0 0-2.8 2.8l5.2 5.2a6 6 0 0 0 8.5 0l2.5-2.5a2 2 0 0 0 0-2.8l-1.5-1.5a2 2 0 0 0-2.8 0l-.7.7V6.5a2 2 0 0 0-2-2z"
-        fill={filled ? "currentColor" : "none"}
-        stroke="currentColor"
-        strokeWidth={filled ? "1.5" : "1.8"}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function TopicChip({
   children,
   active = false,
@@ -115,10 +88,10 @@ export function TopicChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "shrink-0 rounded-full border px-3 py-1 text-xs font-sans font-medium transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center cursor-pointer",
+        "shrink-0 rounded-xl border px-3 py-1 text-xs font-medium transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center spring-press cursor-pointer",
         active
           ? "border-primary bg-primary text-primary-foreground shadow-2xs font-semibold"
-          : "border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:border-border",
+          : "border-border/60 bg-muted/50 text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:border-border",
       )}
     >
       {children}
@@ -128,7 +101,6 @@ export function TopicChip({
 
 export function FollowButton({ handle }: { handle: string }) {
   const { followed, toggleFollow, user, profile } = useInkline();
-  const { t } = useSettings();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const active = followed.has(handle);
@@ -140,11 +112,11 @@ export function FollowButton({ handle }: { handle: string }) {
       size="sm"
       disabled={busy}
       className={cn(
-        "h-7 min-h-[36px] sm:min-h-0 min-w-[76px] rounded-full px-3 text-xs font-sans font-semibold gap-1 transition-all duration-150 active:scale-95 cursor-pointer",
+        "h-7 min-h-[36px] sm:min-h-0 min-w-[76px] rounded-xl px-3 text-xs font-semibold gap-1 transition-all spring-press cursor-pointer",
         busy && "opacity-80",
         active
           ? "border-border hover:border-destructive hover:text-destructive hover:bg-destructive/10"
-          : "bg-foreground text-background hover:bg-foreground/90",
+          : "bg-foreground text-background hover:bg-foreground/90 shadow-2xs",
       )}
       onClick={async (event) => {
         event.preventDefault();
@@ -270,18 +242,18 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
   return (
     <article
       className={cn(
-        "border-b border-border/70 p-4 sm:p-5 hover:bg-muted/15 transition-colors relative group",
+        "border-b border-border/60 p-4 sm:p-5 hover:bg-muted/30 transition-all duration-150 relative group",
         full && "border-b-0 hover:bg-transparent",
       )}
     >
-      <div className="flex gap-3">
+      <div className="flex gap-3.5">
         {/* Author Avatar Column */}
         <div className="shrink-0 mt-0.5">
           <ProfilePreview handle={post.author.handle}>
             <Link
               to="/profile/$handle"
               params={{ handle: post.author.handle }}
-              className="block cursor-pointer"
+              className="block cursor-pointer spring-press"
             >
               <Avatar className="size-10 ring-1 ring-border shadow-2xs transition-transform group-hover:scale-102">
                 {getAvatarUrl(post.author.avatarUrl) && (
@@ -291,7 +263,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                     className="object-cover"
                   />
                 )}
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold font-sans">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                   {post.author.initials}
                 </AvatarFallback>
               </Avatar>
@@ -308,19 +280,19 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                 <Link
                   to="/profile/$handle"
                   params={{ handle: post.author.handle }}
-                  className="font-sans font-bold text-sm text-foreground hover:underline truncate cursor-pointer"
+                  className="font-bold text-sm text-foreground hover:underline truncate cursor-pointer"
                 >
                   {post.author.name}
                 </Link>
               </ProfilePreview>
-              <span className="font-sans text-xs text-muted-foreground truncate">
+              <span className="text-xs text-muted-foreground truncate font-mono">
                 @{post.author.handle}
               </span>
               <span className="text-muted-foreground/60 text-xs">·</span>
               <Link
                 to="/post/$id"
                 params={{ id: post.id }}
-                className="font-sans text-xs text-muted-foreground hover:underline shrink-0"
+                className="text-xs text-muted-foreground hover:underline shrink-0"
               >
                 {post.time}
               </Link>
@@ -334,7 +306,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-8 rounded-full text-muted-foreground hover:text-foreground cursor-pointer"
+                    className="size-8 rounded-full text-muted-foreground hover:text-foreground spring-press cursor-pointer"
                     aria-label="Post options"
                   >
                     <MoreHorizontal className="size-4" />
@@ -342,20 +314,20 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-48 rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg backdrop-blur-md"
+                  className="w-48 rounded-2xl border border-border/80 liquid-glass p-1.5 shadow-lg"
                 >
                   {isMine && !editing && (
                     <>
                       <DropdownMenuItem
                         onClick={() => setEditing(true)}
-                        className="cursor-pointer gap-2 text-xs font-sans"
+                        className="cursor-pointer gap-2 text-xs rounded-xl px-2.5 py-2"
                       >
                         <Pencil className="size-3.5" />
                         <span>Edit Post</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => void remove()}
-                        className="cursor-pointer gap-2 text-xs font-sans text-destructive focus:text-destructive focus:bg-destructive/10"
+                        className="cursor-pointer gap-2 text-xs rounded-xl px-2.5 py-2 text-destructive focus:text-destructive focus:bg-destructive/10"
                       >
                         <Trash2 className="size-3.5" />
                         <span>Delete Post</span>
@@ -365,7 +337,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                   )}
                   <DropdownMenuItem
                     onClick={handleShare}
-                    className="cursor-pointer gap-2 text-xs font-sans"
+                    className="cursor-pointer gap-2 text-xs rounded-xl px-2.5 py-2"
                   >
                     <Share2 className="size-3.5 text-primary" />
                     <span>Copy Link</span>
@@ -380,7 +352,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                           }
                           setReportOpen(true);
                         }}
-                        className="cursor-pointer gap-2 text-xs font-sans text-muted-foreground hover:text-foreground"
+                        className="cursor-pointer gap-2 text-xs rounded-xl px-2.5 py-2 text-muted-foreground hover:text-foreground"
                       >
                         <Flag className="size-3.5 text-amber-500" />
                         <span>Report Post</span>
@@ -393,7 +365,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                           }
                           setBlockOpen(true);
                         }}
-                        className="cursor-pointer gap-2 text-xs font-sans text-destructive focus:text-destructive focus:bg-destructive/10"
+                        className="cursor-pointer gap-2 text-xs rounded-xl px-2.5 py-2 text-destructive focus:text-destructive focus:bg-destructive/10"
                       >
                         <UserX className="size-3.5" />
                         <span>Block @{post.author.handle}</span>
@@ -407,7 +379,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
 
           {/* Post Title (If present) */}
           {post.title && (
-            <h2 className="font-sans text-base sm:text-lg font-bold text-foreground tracking-tight mb-1.5 leading-snug">
+            <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight mb-1.5 leading-snug">
               <Link to="/post/$id" params={{ id: post.id }} className="hover:text-primary transition-colors">
                 {post.title}
               </Link>
@@ -420,7 +392,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
               <Textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                className="w-full min-h-[120px] rounded-xl font-sans text-sm p-3"
+                className="w-full min-h-[120px] rounded-2xl text-sm p-3.5"
               />
               <div className="flex gap-2 justify-end">
                 <Button
@@ -428,7 +400,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                   variant="outline"
                   onClick={() => setEditing(false)}
                   disabled={busy}
-                  className="rounded-full h-8 text-xs font-sans"
+                  className="rounded-xl h-8 text-xs spring-press"
                 >
                   Cancel
                 </Button>
@@ -436,7 +408,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                   size="sm"
                   onClick={() => void saveEdit()}
                   disabled={busy || !draft.trim()}
-                  className="rounded-full h-8 text-xs font-sans"
+                  className="rounded-xl h-8 text-xs spring-press"
                 >
                   {busy ? "Saving…" : "Save Changes"}
                 </Button>
@@ -446,7 +418,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
             <div className="my-1.5">
               <p
                 className={cn(
-                  "font-sans text-sm sm:text-base leading-relaxed text-foreground whitespace-pre-line break-words",
+                  "text-sm sm:text-base leading-relaxed text-foreground whitespace-pre-line break-words",
                   isPoetry && "font-serif italic leading-loose text-foreground/95",
                   !expanded && isLong && "line-clamp-4",
                 )}
@@ -457,7 +429,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                 <button
                   type="button"
                   onClick={() => setExpanded(!expanded)}
-                  className="mt-1 text-xs font-semibold text-primary hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                  className="mt-1 text-xs font-semibold text-primary hover:underline inline-flex items-center gap-0.5 cursor-pointer spring-press"
                 >
                   {expanded ? (
                     <>
@@ -481,7 +453,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                   key={tag}
                   to="/discover"
                   search={{ q: tag }}
-                  className="text-xs font-sans font-medium text-primary hover:underline"
+                  className="text-xs font-medium text-primary hover:underline"
                 >
                   #{tag}
                 </Link>
@@ -495,13 +467,13 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
             <Link
               to="/post/$id"
               params={{ id: post.id }}
-              className="flex items-center gap-1.5 text-xs font-sans font-medium hover:text-primary transition-colors cursor-pointer group/action p-1 -m-1"
+              className="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors cursor-pointer group/action p-1 -m-1 spring-press"
               aria-label="View comments"
             >
               <div className="size-8 rounded-full flex items-center justify-center group-hover/action:bg-primary/10 transition-colors">
                 <MessageCircle className="size-4.5" />
               </div>
-              <span>{post.comments}</span>
+              <span className="tabular-numbers">{post.comments}</span>
             </Link>
 
             {/* Like Heart Action */}
@@ -509,7 +481,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
               type="button"
               onClick={handleToggleLike}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-sans font-medium transition-colors cursor-pointer group/action p-1 -m-1",
+                "flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer group/action p-1 -m-1 spring-press",
                 isLiked ? "text-rose-600 font-semibold" : "hover:text-rose-600",
               )}
               aria-label={isLiked ? "Unlike post" : "Like post"}
@@ -517,12 +489,12 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
               <div className="size-8 rounded-full flex items-center justify-center group-hover/action:bg-rose-500/10 transition-colors">
                 <Heart
                   className={cn(
-                    "size-4.5 transition-transform active:scale-125",
-                    isLiked && "fill-rose-600 text-rose-600",
+                    "size-4.5 transition-transform",
+                    isLiked && "fill-rose-600 text-rose-600 scale-110",
                   )}
                 />
               </div>
-              <span>{post.likes}</span>
+              <span className="tabular-numbers">{post.likes}</span>
             </button>
 
             {/* Bookmark Action */}
@@ -530,7 +502,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
               type="button"
               onClick={handleToggleBookmark}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-sans font-medium transition-colors cursor-pointer group/action p-1 -m-1",
+                "flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer group/action p-1 -m-1 spring-press",
                 bookmarked ? "text-primary font-semibold" : "hover:text-primary",
               )}
               aria-label={bookmarked ? "Remove bookmark" : "Bookmark post"}
@@ -544,7 +516,7 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
             <button
               type="button"
               onClick={handleShare}
-              className="flex items-center gap-1.5 text-xs font-sans font-medium hover:text-primary transition-colors cursor-pointer group/action p-1 -m-1"
+              className="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors cursor-pointer group/action p-1 -m-1 spring-press"
               aria-label="Share post"
             >
               <div className="size-8 rounded-full flex items-center justify-center group-hover/action:bg-primary/10 transition-colors">

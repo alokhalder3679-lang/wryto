@@ -37,11 +37,11 @@ function FeedErrorComponent() {
   return (
     <AppShell>
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <h2 className="font-sans text-xl font-bold">Unable to load feed</h2>
+        <h2 className="text-xl font-bold">Unable to load feed</h2>
         <p className="max-w-md text-sm text-muted-foreground">
           There was a problem loading your feed. Please try refreshing.
         </p>
-        <Button onClick={() => window.location.reload()} className="rounded-full min-h-[44px]">
+        <Button onClick={() => window.location.reload()} className="rounded-xl min-h-[44px]">
           Refresh
         </Button>
       </div>
@@ -57,13 +57,13 @@ function FeedSkeleton() {
           <div className="flex items-center gap-3">
             <Skeleton className="size-10 rounded-full" />
             <div className="space-y-1.5 flex-1">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-4 w-32 rounded-md" />
+              <Skeleton className="h-3 w-20 rounded-md" />
             </div>
           </div>
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-3/4 rounded-md" />
+          <Skeleton className="h-4 w-full rounded-md" />
+          <Skeleton className="h-4 w-5/6 rounded-md" />
         </div>
       ))}
     </div>
@@ -114,11 +114,11 @@ function FollowingFeed() {
         <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <UserPlus className="size-6" />
         </div>
-        <h3 className="font-sans text-base font-bold text-foreground">See posts from creators you follow</h3>
-        <p className="font-sans text-xs text-muted-foreground leading-relaxed">
+        <h3 className="text-base font-bold text-foreground">See posts from creators you follow</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed">
           Sign in to curate your personal feed and stay updated with the writers and thinkers you care about.
         </p>
-        <Button asChild className="rounded-full px-6 font-semibold" size="sm">
+        <Button asChild className="rounded-xl px-6 font-semibold min-h-[44px]" size="sm">
           <Link to="/auth">Sign In to Wryto</Link>
         </Button>
       </div>
@@ -135,17 +135,17 @@ function FollowingFeed() {
         <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
           <BookOpen className="size-6" />
         </div>
-        <h3 className="font-sans text-base font-bold text-foreground">Your Following feed is quiet</h3>
-        <p className="font-sans text-xs text-muted-foreground leading-relaxed">
+        <h3 className="text-base font-bold text-foreground">Your Following feed is quiet</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed">
           Follow writers and creators across Wryto to see their latest thoughts, stories, and poetry here.
         </p>
         <div className="flex justify-center gap-3 pt-2">
-          <Button asChild variant="outline" className="rounded-full text-xs font-semibold" size="sm">
+          <Button asChild variant="outline" className="rounded-xl text-xs font-semibold min-h-[40px]" size="sm">
             <Link to="/discover" search={{ q: "" }}>
               Explore Creators
             </Link>
           </Button>
-          <Button asChild className="rounded-full text-xs font-semibold" size="sm">
+          <Button asChild className="rounded-xl text-xs font-semibold min-h-[40px]" size="sm">
             <Link to="/create">Write a Post</Link>
           </Button>
         </div>
@@ -168,39 +168,35 @@ function FeedPage() {
 
   return (
     <AppShell>
-      {/* ── Sticky Top Feed Tabs (Threads / X Standard) ────────── */}
-      <div className="sticky top-0 z-20 flex border-b border-border/70 bg-background/85 backdrop-blur-md">
-        <button
-          type="button"
-          onClick={() => setTab("for-you")}
-          className={cn(
-            "flex-1 py-3.5 text-center text-sm font-sans transition-colors relative cursor-pointer",
-            tab === "for-you"
-              ? "font-bold text-foreground"
-              : "font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30",
-          )}
-        >
-          <span>For You</span>
-          {tab === "for-you" && (
-            <span className="absolute bottom-0 inset-x-12 h-1 bg-primary rounded-full" />
-          )}
-        </button>
+      {/* ── Apple Liquid Glass Segmented Header ────────── */}
+      <div className="sticky top-0 z-20 liquid-glass border-b border-border/60 p-2">
+        <div className="flex p-1 rounded-2xl bg-muted/60 border border-border/50 max-w-md mx-auto">
+          <button
+            type="button"
+            onClick={() => setTab("for-you")}
+            className={cn(
+              "flex-1 py-2 text-center text-xs sm:text-sm rounded-xl transition-all spring-press cursor-pointer",
+              tab === "for-you"
+                ? "bg-card text-foreground font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            For You
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setTab("following")}
-          className={cn(
-            "flex-1 py-3.5 text-center text-sm font-sans transition-colors relative cursor-pointer",
-            tab === "following"
-              ? "font-bold text-foreground"
-              : "font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30",
-          )}
-        >
-          <span>Following</span>
-          {tab === "following" && (
-            <span className="absolute bottom-0 inset-x-12 h-1 bg-primary rounded-full" />
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => setTab("following")}
+            className={cn(
+              "flex-1 py-2 text-center text-xs sm:text-sm rounded-xl transition-all spring-press cursor-pointer",
+              tab === "following"
+                ? "bg-card text-foreground font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Following
+          </button>
+        </div>
       </div>
 
       {/* ── Inline Quick Composer (Top of Feed) ───────────────── */}
@@ -213,14 +209,14 @@ function FeedPage() {
         <FeedSkeleton />
       ) : posts.length === 0 ? (
         <div className="py-20 text-center px-6 space-y-3">
-          <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+          <div className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
             <Sparkles className="size-6" />
           </div>
-          <h3 className="font-sans text-base font-bold text-foreground">Welcome to Wryto</h3>
-          <p className="font-sans text-xs text-muted-foreground max-w-sm mx-auto">
+          <h3 className="text-base font-bold text-foreground">Welcome to Wryto</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
             Be the first to share a thought, poem, or story with the community.
           </p>
-          <Button asChild className="rounded-full text-xs font-semibold mt-2" size="sm">
+          <Button asChild className="rounded-xl text-xs font-semibold mt-2 min-h-[44px]" size="sm">
             <Link to="/create">Publish First Post</Link>
           </Button>
         </div>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Feather, Hash, Loader2, Maximize2, Sparkles, X } from "lucide-react";
+import { BookOpen, Feather, Hash, Loader2, Maximize2, MessageSquare, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useInkline } from "@/lib/inkline-context";
@@ -72,57 +72,60 @@ export function InlineComposer({ onPublished }: { onPublished?: () => void }) {
   }
 
   return (
-    <div className="border-b border-border/70 p-4 bg-card/60 backdrop-blur-xs transition-all">
-      <div className="flex gap-3">
+    <div className="border-b border-border/60 p-4 sm:p-5 bg-card/70 backdrop-blur-md transition-all">
+      <div className="flex gap-3.5">
         {/* User Avatar */}
-        <Avatar className="size-10 shrink-0 ring-1 ring-border mt-0.5">
+        <Avatar className="size-10 shrink-0 ring-1 ring-border mt-0.5 shadow-2xs">
           {getAvatarUrl(profile?.avatarUrl) && (
             <AvatarImage src={getAvatarUrl(profile?.avatarUrl)!} alt={profile?.name ?? "User"} />
           )}
-          <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold font-sans">
+          <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
             {profile?.name ? initialsOf(profile.name) : "U"}
           </AvatarFallback>
         </Avatar>
 
         {/* Composer Form Area */}
         <div className="flex-1 min-w-0">
-          {/* Format Mode Selector */}
-          <div className="flex items-center gap-1.5 mb-2">
+          {/* Format Mode Selector with Clean Line Icons (Unslop Standard) */}
+          <div className="flex items-center gap-1.5 mb-2.5">
             <button
               type="button"
               onClick={() => setMode("thought")}
               className={cn(
-                "px-2.5 py-1 rounded-full text-xs font-sans font-medium transition-all cursor-pointer",
+                "inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium transition-all spring-press cursor-pointer",
                 mode === "thought"
                   ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+                  : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              💭 Thought
+              <MessageSquare className="size-3.5" />
+              <span>Thought</span>
             </button>
             <button
               type="button"
               onClick={() => setMode("story")}
               className={cn(
-                "px-2.5 py-1 rounded-full text-xs font-sans font-medium transition-all cursor-pointer",
+                "inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium transition-all spring-press cursor-pointer",
                 mode === "story"
                   ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+                  : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              📖 Story / Essay
+              <BookOpen className="size-3.5" />
+              <span>Story / Essay</span>
             </button>
             <button
               type="button"
               onClick={() => setMode("poetry")}
               className={cn(
-                "px-2.5 py-1 rounded-full text-xs font-sans font-medium transition-all cursor-pointer",
+                "inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium transition-all spring-press cursor-pointer",
                 mode === "poetry"
                   ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+                  : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              ✍️ Poetry
+              <Feather className="size-3.5" />
+              <span>Poetry</span>
             </button>
           </div>
 
@@ -134,7 +137,7 @@ export function InlineComposer({ onPublished }: { onPublished?: () => void }) {
               maxLength={120}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title of your piece (optional)"
-              className="w-full mb-2 bg-transparent text-base font-bold font-sans text-foreground placeholder:text-muted-foreground/50 border-b border-border/50 pb-1.5 outline-none"
+              className="w-full mb-2 bg-transparent text-base font-semibold text-foreground placeholder:text-muted-foreground/50 border-b border-border/50 pb-1.5 outline-none"
             />
           )}
 
@@ -152,7 +155,7 @@ export function InlineComposer({ onPublished }: { onPublished?: () => void }) {
                   : "What's on your mind? Share a thought..."
             }
             className={cn(
-              "w-full bg-transparent text-sm sm:text-base font-sans text-foreground placeholder:text-muted-foreground/60 border-none outline-none resize-none min-h-[64px] leading-relaxed",
+              "w-full bg-transparent text-sm sm:text-base text-foreground placeholder:text-muted-foreground/60 border-none outline-none resize-none min-h-[64px] leading-relaxed",
               mode === "poetry" && "font-serif italic leading-loose",
             )}
             rows={2}
@@ -160,10 +163,10 @@ export function InlineComposer({ onPublished }: { onPublished?: () => void }) {
 
           {/* Expanded Tags & Actions */}
           {(isFocused || body.length > 0) && (
-            <div className="pt-2 border-t border-border/40 mt-2 space-y-3 animate-fade-in">
+            <div className="pt-2.5 border-t border-border/50 mt-2 space-y-3">
               {/* Quick Tag Pills */}
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-sans text-muted-foreground font-medium flex items-center gap-1">
+                <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
                   <Hash className="size-3" /> Topics:
                 </span>
                 {SUGGESTED_TAGS.map((tag) => {
@@ -174,10 +177,10 @@ export function InlineComposer({ onPublished }: { onPublished?: () => void }) {
                       type="button"
                       onClick={() => toggleTag(tag)}
                       className={cn(
-                        "px-2 py-0.5 rounded-md text-[11px] font-sans transition-colors cursor-pointer",
+                        "px-2.5 py-0.5 rounded-lg text-[11px] transition-all spring-press cursor-pointer",
                         active
                           ? "bg-primary/15 text-primary font-semibold ring-1 ring-primary/30"
-                          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
+                          : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
                     >
                       #{tag}
@@ -189,7 +192,7 @@ export function InlineComposer({ onPublished }: { onPublished?: () => void }) {
               {/* Bottom Row Controls */}
               <div className="flex items-center justify-between pt-1">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-sans text-muted-foreground">
+                  <span className="text-xs text-muted-foreground tabular-numbers">
                     {body.length} / 3,000
                   </span>
                   <Link
@@ -205,7 +208,7 @@ export function InlineComposer({ onPublished }: { onPublished?: () => void }) {
                 <Button
                   onClick={() => void handlePublish()}
                   disabled={!body.trim() || busy}
-                  className="h-9 px-5 rounded-full bg-primary text-primary-foreground font-semibold text-xs shadow-xs hover:bg-primary/90 transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+                  className="h-9 px-5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs shadow-xs hover:bg-primary/90 spring-press cursor-pointer disabled:opacity-50"
                 >
                   {busy ? (
                     <>
