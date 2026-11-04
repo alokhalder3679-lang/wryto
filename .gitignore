@@ -39,6 +39,7 @@ supabase/.branches/
 decomp_dict_*.txt
 
 # Environment secrets
+.vercel
 .env
 .env.*
 .env.local
