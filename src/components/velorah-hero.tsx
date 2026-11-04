@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  Sparkles,
-  ArrowRight,
-  BookOpen,
-  Feather,
-  Sun,
-  Moon,
-  Compass,
-} from "lucide-react";
+import { ArrowRight, Feather, Sun, Moon, Compass } from "lucide-react";
 import { useInkline } from "@/lib/inkline-context";
 import { useSettings } from "@/lib/user-settings";
 import { JourneyModal } from "@/components/journey-modal";
@@ -16,12 +8,12 @@ import { JourneyModal } from "@/components/journey-modal";
 const VIDEO_URL =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260324_151826_c7218672-6e92-402c-9e45-f1e0f454bdc4.mp4";
 
-export function WrytoCinematicLogo({ className = "h-11 sm:h-12 w-auto" }: { className?: string }) {
+export function WrytoCinematicLogo({ className = "h-11 sm:h-13 w-auto" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 210 115"
-      width="146"
-      height="80"
+      width="156"
+      height="85"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`block shrink-0 select-none ${className}`}
@@ -184,21 +176,13 @@ export default function CustomHero() {
           aria-label="Main Navigation"
           className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between"
         >
-          {/* Masthead Brand Lockup */}
+          {/* Masthead Brand Lockup: Clean authentic SVG logo only */}
           <Link
             to="/"
-            className="inline-flex items-center gap-3 min-h-[44px] min-w-[44px] focus:outline-none transition-opacity hover:opacity-90 rounded-lg group"
+            className="inline-flex items-center min-h-[44px] min-w-[44px] focus:outline-none transition-opacity hover:opacity-90 rounded-lg"
             aria-label="Wryto Home"
           >
-            <WrytoCinematicLogo className="h-10 sm:h-12 w-auto drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]" />
-            <div className="hidden sm:flex flex-col text-left">
-              <span className="font-serif text-white font-normal text-lg tracking-tight leading-none drop-shadow-md">
-                Wryto
-              </span>
-              <span className="text-[10px] tracking-widest uppercase font-sans text-white/70 font-medium">
-                Volume I
-              </span>
-            </div>
+            <WrytoCinematicLogo className="h-11 sm:h-13 w-auto drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]" />
           </Link>
 
           {/* Navigation Actions */}
@@ -234,13 +218,12 @@ export default function CustomHero() {
                 >
                   Sign In
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setModalMode("signup")}
+                <Link
+                  to="/auth"
                   className="liquid-glass-button inline-flex items-center justify-center min-h-[44px] px-5 sm:px-6 py-2.5 rounded-full text-white font-sans font-medium text-sm hover:scale-[1.03] active:scale-[0.98] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 shadow-lg"
                 >
                   Start Writing
-                </button>
+                </Link>
               </>
             )}
           </div>
@@ -248,18 +231,10 @@ export default function CustomHero() {
       </header>
 
       {/* Vertically Centered Cinematic Hero Content */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-8 py-12 sm:py-16 max-w-5xl mx-auto">
-        {/* Issue Badge Pill */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs sm:text-sm font-sans font-medium text-white/90 tracking-wide mb-6 sm:mb-8 shadow-sm transition-all">
-          <Sparkles className="size-3.5 text-white/90 shrink-0" />
-          <span className="text-balance">
-            Volume I • The Autumn Edition • A Sanctuary for Thoughtful Writing
-          </span>
-        </div>
-
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-8 py-14 sm:py-20 max-w-5xl mx-auto">
         {/* Grand Literary Headline in Instrument Serif */}
         <h1
-          className="text-5xl sm:text-7xl md:text-8xl lg:text-[5.75rem] leading-[1.03] tracking-[-2px] sm:tracking-[-2.5px] max-w-5xl font-normal text-white animate-fade-rise [text-wrap:balance] drop-shadow-[0_4px_28px_rgba(0,0,0,0.55)]"
+          className="text-5xl sm:text-7xl md:text-8xl lg:text-[5.75rem] leading-[1.02] tracking-[-2px] sm:tracking-[-2.5px] max-w-5xl font-normal text-white animate-fade-rise [text-wrap:balance] drop-shadow-[0_4px_28px_rgba(0,0,0,0.55)]"
           style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
         >
           A quiet place for{" "}
@@ -267,39 +242,29 @@ export default function CustomHero() {
         </h1>
 
         {/* Subtitle */}
-        <p className="font-reading text-lg sm:text-xl text-white/85 max-w-2xl mx-auto leading-relaxed mt-5 sm:mt-7 text-balance animate-fade-rise-delay drop-shadow-[0_2px_14px_rgba(0,0,0,0.45)]">
+        <p className="font-reading text-lg sm:text-xl text-white/85 max-w-2xl mx-auto leading-relaxed mt-6 sm:mt-8 text-balance animate-fade-rise-delay drop-shadow-[0_2px_14px_rgba(0,0,0,0.45)]">
           A distraction-free publishing haven. No algorithmic outrage. No video noise. Just essays,
           stories, and ideas that linger.
         </p>
 
-        {/* Primary Action Buttons */}
-        <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 w-full max-w-md sm:max-w-none animate-fade-rise-delay-2">
-          {/* 1. Begin Reading -> opens interactive reading sanctuary */}
-          <button
-            type="button"
-            onClick={() => setModalMode("reading")}
-            className="w-full sm:w-auto liquid-glass-button rounded-full px-8 sm:px-10 py-3.5 sm:py-4 text-base text-white font-medium hover:scale-[1.03] active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 shadow-lg min-h-[48px]"
-          >
-            <BookOpen className="size-4.5 text-white/90" />
-            <span>Begin Reading</span>
-          </button>
-
-          {/* 2. Start Writing -> direct signup / compose */}
+        {/* Action Buttons: Cleanly Arranged */}
+        <div className="mt-10 sm:mt-14 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5 w-full max-w-md sm:max-w-none animate-fade-rise-delay-2">
+          {/* 1. Start Writing -> primary action pill */}
           <Link
             to="/auth"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[48px] px-8 sm:px-9 py-3.5 sm:py-4 rounded-full bg-primary text-primary-foreground font-sans font-medium text-base shadow-lg hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 min-h-[50px] px-8 sm:px-10 py-3.5 sm:py-4 rounded-full bg-primary text-primary-foreground font-sans font-medium text-base shadow-xl hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
           >
             <Feather className="size-4.5" />
             <span>Start Writing</span>
             <ArrowRight className="size-4" />
           </Link>
 
-          {/* 3. Explore Stories -> feed */}
+          {/* 2. Explore Feed -> liquid-glass secondary pill */}
           <Link
             to="/feed"
-            className="w-full sm:w-auto liquid-glass-button rounded-full px-7 sm:px-8 py-3.5 sm:py-4 text-base text-white/90 font-medium hover:scale-[1.02] active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 min-h-[48px]"
+            className="w-full sm:w-auto liquid-glass-button rounded-full px-8 sm:px-10 py-3.5 sm:py-4 text-base text-white font-medium hover:scale-[1.02] active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 min-h-[50px]"
           >
-            <Compass className="size-4.5 text-white/80" />
+            <Compass className="size-4.5 text-white/85" />
             <span>Explore Feed</span>
           </Link>
         </div>
