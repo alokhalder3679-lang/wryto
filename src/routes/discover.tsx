@@ -1,14 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, Feather, Search, Sparkles, X } from "lucide-react";
+import { Compass, Hash, Search, Sparkles, TrendingUp, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppShell } from "@/components/app-shell";
-import { FollowButton, PostCard, TopicChip } from "@/components/post-card";
+import { FollowButton, PostCard } from "@/components/post-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useInkline } from "@/lib/inkline-context";
 import { getAvatarUrl } from "@/lib/avatar";
+import { initialsOf } from "@/lib/inkline-data";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/discover")({
   staticData: { sitemap: true },
@@ -17,15 +19,15 @@ export const Route = createFileRoute("/discover")({
   }),
   head: () => ({
     meta: [
-      { title: "Discover — Wryto" },
+      { title: "Explore — Wryto" },
       {
         name: "description",
-        content: "Find writers, essays, poetry, stories, and new ideas on Wryto.",
+        content: "Discover trending topics, creators, and posts on Wryto.",
       },
-      { property: "og:title", content: "Discover — Wryto" },
+      { property: "og:title", content: "Explore — Wryto" },
       {
         property: "og:description",
-        content: "Find writers, essays, poetry, stories, and new ideas on Wryto.",
+        content: "Discover trending topics, creators, and posts on Wryto.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -37,61 +39,42 @@ export const Route = createFileRoute("/discover")({
 
 function DiscoverErrorComponent() {
   return (
-    <AppShell title="Discover">
+    <AppShell title="Explore">
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 my-auto min-h-[400px]">
-        <div className="rounded-2xl bg-destructive/10 p-4 text-destructive">
-          <BookOpen className="size-8 stroke-[1.75]" />
-        </div>
-        <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">
-          Unable to load discovery archive
-        </h2>
-        <p className="max-w-md font-reading text-sm text-muted-foreground leading-relaxed">
-          There was an issue opening the topic catalog. Please try refreshing or return to the feed.
+        <h2 className="font-sans text-xl font-bold">Unable to load explore</h2>
+        <p className="max-w-md font-sans text-sm text-muted-foreground leading-relaxed">
+          There was an issue opening the explore page. Please try refreshing or return to the feed.
         </p>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => window.location.reload()}
-            className="rounded-full min-h-[44px]"
-          >
-            Refresh
-          </Button>
-          <Button asChild className="rounded-full min-h-[44px]">
-            <Link to="/feed">Go to Feed</Link>
-          </Button>
-        </div>
+        <Button onClick={() => window.location.reload()} className="rounded-full">Refresh</Button>
       </div>
     </AppShell>
   );
 }
 
-const DISCOVER_TOPICS = [
-  "essays",
-  "poetry",
-  "philosophy",
-  "culture",
-  "stories",
-  "craft",
-  "memoir",
+const TRENDING_EXPLORE = [
+  { tag: "essays", label: "Writing & Craft", count: "1.4k posts" },
+  { tag: "poetry", label: "Poetry & Verse", count: "980 posts" },
+  { tag: "philosophy", label: "Deep Thoughts", count: "720 posts" },
+  { tag: "creative", label: "Creative Work", count: "650 posts" },
+  { tag: "reflections", label: "Life & Lessons", count: "540 posts" },
+  { tag: "technology", label: "Future & AI", count: "430 posts" },
 ];
 
 function DiscoverPage() {
   const { q } = Route.useSearch();
   const [query, setQuery] = useState(q);
   const { posts, writers, profile } = useInkline();
+  const [activeTab, setActiveTab] = useState<"all" | "people" | "posts">("all");
 
   const term = query.trim().toLowerCase().replace(/^#/, "");
 
-  const matches = posts.filter((post) => {
+  const matchedPosts = posts.filter((post) => {
     if (!term) return true;
     const bodyMatch = post.body?.toLowerCase().includes(term);
     const titleMatch = post.title?.toLowerCase().includes(term);
     const tagMatch =
       Array.isArray(post.tags) &&
-      post.tags.some((tag) => {
-        const cleanTag = tag.toLowerCase().replace(/^#/, "");
-        return cleanTag.includes(term) || term.includes(cleanTag);
-      });
+      post.tags.some((tag) => tag.toLowerCase().replace(/^#/, "").includes(term));
     const authorNameMatch = post.author?.name?.toLowerCase().includes(term);
     const authorHandleMatch = post.author?.handle?.toLowerCase().includes(term);
     return bodyMatch || titleMatch || tagMatch || authorNameMatch || authorHandleMatch;
@@ -106,325 +89,281 @@ function DiscoverPage() {
       avatar_url?: string | null;
     }[]
   >([]);
-  const [peopleState, setPeopleState] = useState<"idle" | "loading" | "error">("idle");
-  const userTerm = term.replace(/^@/, "").replace(/[^a-z0-9_]/g, "");
+  const [peopleLoading, setPeopleLoading] = useState(false);
 
   useEffect(() => {
-    if (!userTerm) {
+    if (!term) {
       setPeople([]);
-      setPeopleState("idle");
+      setPeopleLoading(false);
       return;
     }
-    setPeopleState("loading");
+    setPeopleLoading(true);
     const t = setTimeout(async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("profiles")
-        .select("handle, display_name, bio, followers_count, avatar_url")
-        .or(`handle.ilike.${userTerm}%,display_name.ilike.%${userTerm}%`)
+        .select("handle, display_name, bio, followers_count, avatar_url, profile_image")
+        .or(`handle.ilike.%${term}%,display_name.ilike.%${term}%`)
         .order("followers_count", { ascending: false })
-        .limit(6);
-      if (error) {
-        setPeopleState("error");
-        return;
-      }
-      setPeople(data ?? []);
-      setPeopleState("idle");
-    }, 250);
-    return () => clearTimeout(t);
-  }, [userTerm]);
+        .limit(10);
+      setPeople((data ?? []) as any);
+      setPeopleLoading(false);
+    }, 200);
 
-  const suggested = writers.filter((writer) => writer.handle !== profile?.handle).slice(0, 6);
+    return () => clearTimeout(t);
+  }, [term]);
+
+  const featuredWriters = writers
+    .filter((w) => w.handle !== profile?.handle)
+    .slice(0, 6);
 
   return (
-    <AppShell title="Discover">
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8 space-y-10">
-        {/* Search Bar & Topic Navigation */}
-        <div className="space-y-4">
-          <div className="relative flex items-center rounded-2xl border border-border/70 bg-card/70 px-4 py-1.5 shadow-2xs focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15 transition-all">
-            <Search className="size-4.5 text-muted-foreground shrink-0" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search writers, essays, poems, or topics…"
-              className="h-11 w-full bg-transparent border-0 pl-3 pr-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-0 text-sm font-sans"
-              aria-label="Search writers, essays, poems, or topics"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="flex size-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                aria-label="Clear search query"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Topic Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-1">
-            <span className="text-xs font-sans uppercase tracking-widest text-muted-foreground/80 font-medium shrink-0 mr-1 hidden sm:inline">
-              Explore:
-            </span>
-            {DISCOVER_TOPICS.map((topic) => {
-              const isActive = term === topic;
-              return (
-                <TopicChip
-                  key={topic}
-                  active={isActive}
-                  onClick={() => setQuery(isActive ? "" : topic)}
-                >
-                  {`#${topic}`}
-                </TopicChip>
-              );
-            })}
-          </div>
+    <AppShell title="Explore">
+      {/* ── Search Header Bar ─────────────────────────────────── */}
+      <div className="sticky top-0 z-20 p-3 sm:p-4 border-b border-border/70 bg-background/90 backdrop-blur-md">
+        <div className="relative group">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search creators, topics, or keywords..."
+            className="w-full h-11 pl-10 pr-9 rounded-full bg-muted/60 focus:bg-background border border-transparent focus:border-primary/50 text-sm font-sans text-foreground placeholder:text-muted-foreground outline-none transition-all shadow-xs focus:ring-2 focus:ring-primary/20"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 size-5 flex items-center justify-center rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 text-foreground transition-colors cursor-pointer"
+            >
+              <X className="size-3" />
+            </button>
+          )}
         </div>
 
-        {/* Featured Voices Section (when no search query) */}
-        {!query && suggested.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-baseline justify-between border-b border-border/50 pb-3">
-              <div>
-                <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                  Featured Voices
-                </h2>
-                <p className="mt-0.5 font-reading text-sm text-muted-foreground">
-                  Writers, essayists, and thinkers publishing on Wryto.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {suggested.map((writer) => {
-                const avatarSrc = getAvatarUrl(writer.avatarUrl);
-                return (
-                  <article
-                    key={writer.handle}
-                    className="group flex flex-col justify-between rounded-2xl border border-border/70 bg-card p-5 transition-all duration-200 hover:border-primary/40 hover:shadow-xs"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-3">
-                        <Link
-                          to="/profile/$handle"
-                          params={{ handle: writer.handle }}
-                          className="flex items-center gap-3 min-w-0 flex-1 group/author cursor-pointer"
-                        >
-                          <Avatar className="size-12 shrink-0 ring-1 ring-border/60 transition-colors group-hover/author:ring-primary/40">
-                            {avatarSrc && (
-                              <AvatarImage
-                                src={avatarSrc}
-                                alt={writer.name}
-                                className="object-cover"
-                              />
-                            )}
-                            <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
-                              {writer.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-display text-base font-semibold text-foreground transition-colors group-hover/author:text-primary">
-                              {writer.name}
-                            </p>
-                            <p className="truncate text-xs font-sans text-muted-foreground">
-                              @{writer.handle}
-                            </p>
-                          </div>
-                        </Link>
-                        <FollowButton handle={writer.handle} />
-                      </div>
-
-                      {writer.bio && (
-                        <p className="mt-3.5 font-reading text-sm text-foreground/80 line-clamp-2 leading-relaxed">
-                          {writer.bio}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between text-xs font-sans text-muted-foreground">
-                      <span>{writer.location ? `📍 ${writer.location}` : "Writer"}</span>
-                      <Link
-                        to="/profile/$handle"
-                        params={{ handle: writer.handle }}
-                        className="text-primary hover:underline font-medium min-h-[44px] sm:min-h-0 flex items-center"
-                      >
-                        View profile →
-                      </Link>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Matching Writers Section (when search query is present) */}
+        {/* Filter Tabs if searching */}
         {query && (
-          <section className="space-y-4">
-            <div className="border-b border-border/50 pb-3">
-              <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                Matching Writers
-              </h2>
-              <p className="mt-0.5 font-reading text-sm text-muted-foreground">
-                Authors matching “{query}”
-              </p>
+          <div className="flex gap-4 pt-3 border-t border-border/40 mt-3 text-xs font-sans font-semibold">
+            <button
+              type="button"
+              onClick={() => setActiveTab("all")}
+              className={cn(
+                "pb-1 cursor-pointer transition-colors relative",
+                activeTab === "all" ? "text-primary" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Top Matches
+              {activeTab === "all" && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("people")}
+              className={cn(
+                "pb-1 cursor-pointer transition-colors relative",
+                activeTab === "people" ? "text-primary" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Creators ({people.length})
+              {activeTab === "people" && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("posts")}
+              className={cn(
+                "pb-1 cursor-pointer transition-colors relative",
+                activeTab === "posts" ? "text-primary" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Posts ({matchedPosts.length})
+              {activeTab === "posts" && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-primary" />}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Content View ───────────────────────────────────────── */}
+      {!query ? (
+        <div className="divide-y divide-border/60">
+          {/* Trending Topics Widget */}
+          <div className="p-4 sm:p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="size-4 text-primary" />
+              <h2 className="font-sans text-sm font-bold text-foreground">Trending Now</h2>
             </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {TRENDING_EXPLORE.map((item) => (
+                <button
+                  key={item.tag}
+                  type="button"
+                  onClick={() => setQuery(item.tag)}
+                  className="p-3 rounded-xl border border-border/60 bg-card hover:bg-muted/40 transition-colors text-left cursor-pointer group"
+                >
+                  <p className="text-[10px] font-sans text-muted-foreground uppercase font-medium">
+                    {item.label}
+                  </p>
+                  <p className="font-sans text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                    #{item.tag}
+                  </p>
+                  <p className="text-[11px] font-sans text-muted-foreground">{item.count}</p>
+                </button>
+              ))}
+            </div>
+          </div>
 
-            {peopleState === "loading" ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="rounded-2xl border border-border/60 bg-card p-5 space-y-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="size-12 rounded-full" />
-                      <div className="space-y-1.5 flex-1">
-                        <Skeleton className="h-4 w-28" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-3/4" />
-                  </div>
-                ))}
+          {/* Creators to Discover */}
+          {featuredWriters.length > 0 && (
+            <div className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-primary" />
+                <h2 className="font-sans text-sm font-bold text-foreground">Creators to Follow</h2>
               </div>
-            ) : peopleState === "error" ? (
-              <p className="font-reading text-sm text-destructive py-2">
-                Couldn't search writers. Please try refreshing.
-              </p>
-            ) : people.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {people.map((w) => {
-                  const avatarSrc = getAvatarUrl(w.avatar_url);
-                  return (
-                    <article
-                      key={w.handle}
-                      className="group flex flex-col justify-between rounded-2xl border border-border/70 bg-card p-5 transition-all duration-200 hover:border-primary/40 hover:shadow-xs"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {featuredWriters.map((writer) => (
+                  <div
+                    key={writer.handle}
+                    className="p-3.5 rounded-2xl border border-border/70 bg-card flex items-center justify-between gap-3 shadow-2xs"
+                  >
+                    <Link
+                      to="/profile/$handle"
+                      params={{ handle: writer.handle }}
+                      className="flex items-center gap-3 min-w-0 flex-1 group"
                     >
-                      <div>
-                        <div className="flex items-start justify-between gap-3">
-                          <Link
-                            to="/profile/$handle"
-                            params={{ handle: w.handle }}
-                            className="flex items-center gap-3 min-w-0 flex-1 group/author cursor-pointer"
-                          >
-                            <Avatar className="size-12 shrink-0 ring-1 ring-border/60 transition-colors group-hover/author:ring-primary/40">
-                              {avatarSrc && (
-                                <AvatarImage
-                                  src={avatarSrc}
-                                  alt={w.display_name}
-                                  className="object-cover"
-                                />
-                              )}
-                              <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
-                                {w.display_name.slice(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-display text-base font-semibold text-foreground transition-colors group-hover/author:text-primary">
-                                {w.display_name}
-                              </p>
-                              <p className="truncate text-xs font-sans text-muted-foreground">
-                                @{w.handle}
-                              </p>
-                            </div>
-                          </Link>
-                          {w.handle !== profile?.handle && <FollowButton handle={w.handle} />}
-                        </div>
-
-                        {w.bio && (
-                          <p className="mt-3.5 font-reading text-sm text-foreground/80 line-clamp-2 leading-relaxed">
-                            {w.bio}
+                      <Avatar className="size-11 ring-1 ring-border">
+                        {getAvatarUrl(writer.avatarUrl) && (
+                          <AvatarImage src={getAvatarUrl(writer.avatarUrl)!} alt={writer.name} />
+                        )}
+                        <AvatarFallback className="text-xs font-bold font-sans">
+                          {initialsOf(writer.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold font-sans text-foreground truncate group-hover:text-primary transition-colors">
+                          {writer.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground font-sans truncate">
+                          @{writer.handle}
+                        </p>
+                        {writer.bio && (
+                          <p className="text-[11px] text-muted-foreground font-sans truncate mt-0.5">
+                            {writer.bio}
                           </p>
                         )}
                       </div>
-
-                      <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between text-xs font-sans text-muted-foreground">
-                        <span>{w.followers_count} followers</span>
-                        <Link
-                          to="/profile/$handle"
-                          params={{ handle: w.handle }}
-                          className="text-primary hover:underline font-medium min-h-[44px] sm:min-h-0 flex items-center"
-                        >
-                          View profile →
-                        </Link>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="font-reading text-sm text-muted-foreground py-2">
-                No writers match “{query}”.
-              </p>
-            )}
-          </section>
-        )}
-
-        {/* Curated Stories / Search Results */}
-        <section className="space-y-6">
-          <div className="flex items-baseline justify-between border-b border-border/50 pb-3">
-            <div>
-              <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                {query ? `Dispatches matching “${query}”` : "Curated Stories"}
-              </h2>
-              <p className="mt-0.5 font-reading text-sm text-muted-foreground">
-                {query
-                  ? `${matches.length} ${matches.length === 1 ? "story" : "stories"} found`
-                  : "Selected essays, memoirs, and reflections from the archive."}
-              </p>
-            </div>
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="text-xs font-sans text-primary hover:underline cursor-pointer min-h-[44px] flex items-center"
-              >
-                Clear filter
-              </button>
-            )}
-          </div>
-
-          {matches.length > 0 ? (
-            <div className="divide-y divide-border/40">
-              {matches.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-            </div>
-          ) : (
-            <div className="mx-auto max-w-md px-6 py-16 text-center">
-              <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-6 ring-1 ring-primary/20">
-                <Feather className="size-6 stroke-[1.75]" />
-              </div>
-              <blockquote className="font-display italic text-lg sm:text-xl text-foreground/90 leading-relaxed">
-                “There is no greater agony than bearing an untold story inside you.”
-              </blockquote>
-              <p className="mt-2 text-xs font-sans tracking-widest uppercase text-primary font-medium">
-                — Maya Angelou
-              </p>
-              <p className="mt-4 font-reading text-sm text-muted-foreground leading-relaxed">
-                No words found matching “{query}”. Try another keyword or browse our curated literary topics.
-              </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setQuery("")}
-                  className="rounded-full px-5 py-2 text-xs font-sans font-medium border-border/80 min-h-[44px] flex items-center cursor-pointer"
-                >
-                  Reset Search
-                </Button>
-                <Button
-                  asChild
-                  className="rounded-full px-5 py-2 text-xs font-sans font-medium min-h-[44px] flex items-center cursor-pointer"
-                >
-                  <Link to="/feed">Explore All Stories</Link>
-                </Button>
+                    </Link>
+                    <FollowButton handle={writer.handle} />
+                  </div>
+                ))}
               </div>
             </div>
           )}
-        </section>
-      </div>
+
+          {/* Community Feed Preview */}
+          <div>
+            <div className="px-4 py-3 bg-muted/20 border-b border-border/50">
+              <h2 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Recent Posts
+              </h2>
+            </div>
+            <div className="divide-y divide-border/60">
+              {posts.slice(0, 15).map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Active Search Results */
+        <div className="divide-y divide-border/60">
+          {/* People Section (if tab is all or people) */}
+          {(activeTab === "all" || activeTab === "people") && (
+            <div className="p-4 sm:p-5 space-y-3">
+              <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Creators
+              </h3>
+              {peopleLoading ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="size-10 rounded-full" />
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : people.length === 0 ? (
+                activeTab === "people" && (
+                  <p className="text-xs font-sans text-muted-foreground py-2">
+                    No creators match “{query}”.
+                  </p>
+                )
+              ) : (
+                <div className="space-y-3">
+                  {people.map((p) => (
+                    <div key={p.handle} className="flex items-center justify-between gap-3">
+                      <Link
+                        to="/profile/$handle"
+                        params={{ handle: p.handle }}
+                        className="flex items-center gap-3 min-w-0 flex-1 group"
+                      >
+                        <Avatar className="size-10 ring-1 ring-border">
+                          {getAvatarUrl(p.avatar_url) && (
+                            <AvatarImage src={getAvatarUrl(p.avatar_url)!} alt={p.display_name} />
+                          )}
+                          <AvatarFallback className="text-xs font-bold font-sans">
+                            {initialsOf(p.display_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold font-sans text-foreground truncate group-hover:text-primary transition-colors">
+                            {p.display_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-sans truncate">
+                            @{p.handle} · {p.followers_count} followers
+                          </p>
+                        </div>
+                      </Link>
+                      <FollowButton handle={p.handle} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Posts Section (if tab is all or posts) */}
+          {(activeTab === "all" || activeTab === "posts") && (
+            <div>
+              <div className="px-4 py-2.5 bg-muted/20 border-b border-border/50">
+                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Posts ({matchedPosts.length})
+                </h3>
+              </div>
+              {matchedPosts.length === 0 ? (
+                <div className="py-16 text-center px-4 space-y-2">
+                  <p className="font-sans text-sm text-muted-foreground">
+                    No posts found matching “{query}”.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuery("")}
+                    className="rounded-full text-xs"
+                  >
+                    Clear Search
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {matchedPosts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </AppShell>
   );
 }

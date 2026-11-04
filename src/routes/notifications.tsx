@@ -1,8 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Heart, MessageCircle, UserPlus } from "lucide-react";
+import { CheckCheck, Heart, MessageCircle, UserPlus, Bell } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
+import { FollowButton } from "@/components/post-card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAvatarUrl } from "@/lib/avatar";
+import { initialsOf } from "@/lib/inkline-data";
 import { supabase } from "@/integrations/supabase/client";
 import { relativeTime } from "@/lib/inkline-data";
 import { useInkline } from "@/lib/inkline-context";
@@ -29,11 +33,11 @@ function NotificationsErrorComponent() {
   return (
     <AppShell title="Notifications">
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <h2 className="text-xl font-bold">Unable to load notifications</h2>
-        <p className="max-w-md text-sm text-muted-foreground">
+        <h2 className="text-xl font-bold font-sans">Unable to load notifications</h2>
+        <p className="max-w-md text-sm text-muted-foreground font-sans">
           There was a problem loading your notification stream. Please try refreshing.
         </p>
-        <Button onClick={() => window.location.reload()}>Refresh</Button>
+        <Button onClick={() => window.location.reload()} className="rounded-full">Refresh</Button>
       </div>
     </AppShell>
   );
@@ -47,6 +51,7 @@ type Item = {
   time: string;
   actor: string;
   actorHandle: string;
+  actorAvatar: string | null;
 };
 
 function NotificationsPage() {
@@ -61,11 +66,12 @@ function NotificationsPage() {
     const { data } = await supabase
       .from("notifications")
       .select(
-        "id, kind, post_id, is_read, created_at, actor:profiles!notifications_actor_id_fkey(display_name, handle)",
+        "id, kind, post_id, is_read, created_at, actor:profiles!notifications_actor_id_fkey(display_name, handle, avatar_url, profile_image)",
       )
       .eq("recipient_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50);
+
     setItems(
       ((data ?? []) as never[]).map(
         (row: {
@@ -74,7 +80,7 @@ function NotificationsPage() {
           post_id: string | null;
           is_read: boolean;
           created_at: string;
-          actor: { display_name: string; handle: string } | null;
+          actor: { display_name: string; handle: string; avatar_url?: string; profile_image?: string } | null;
         }) => ({
           id: row.id,
           kind: row.kind || "like",
@@ -83,6 +89,7 @@ function NotificationsPage() {
           time: relativeTime(row.created_at),
           actor: row.actor?.display_name ?? "Someone",
           actorHandle: row.actor?.handle ?? "",
+          actorAvatar: row.actor?.avatar_url || row.actor?.profile_image || null,
         }),
       ),
     );
@@ -91,6 +98,7 @@ function NotificationsPage() {
   useEffect(() => {
     if (!authLoading && !user) void navigate({ to: "/auth", replace: true });
   }, [authLoading, user, navigate]);
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -133,83 +141,129 @@ function NotificationsPage() {
   });
 
   const filterTabs: Array<{ id: "All" | "Likes" | "Comments" | "Followers"; label: string }> = [
-    { id: "All", label: t("allNotif") },
-    { id: "Likes", label: t("likeNotif") },
-    { id: "Comments", label: t("commentNotif") },
-    { id: "Followers", label: t("followNotif") },
+    { id: "All", label: "All" },
+    { id: "Likes", label: "Likes" },
+    { id: "Comments", label: "Comments" },
+    { id: "Followers", label: "Followers" },
   ];
 
   return (
     <AppShell
-      title={t("notifications")}
+      title="Notifications"
       action={
-        <Button variant="ghost" size="sm" onClick={() => void markAllRead()}>
-          {t("markAllRead")}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void markAllRead()}
+          className="text-xs font-sans font-semibold text-primary hover:text-primary gap-1"
+        >
+          <CheckCheck className="size-3.5" />
+          <span>Mark all read</span>
         </Button>
       }
     >
-      <div className="flex gap-6 border-b border-border px-5 sm:px-8 overflow-x-auto">
+      {/* ── Filter Tabs ───────────────────────────────────────── */}
+      <div className="flex border-b border-border/70 bg-background/85 backdrop-blur-md sticky top-0 z-20">
         {filterTabs.map((item) => (
           <button
             key={item.id}
             onClick={() => setFilter(item.id)}
             className={cn(
-              "border-b-2 py-4 text-sm font-semibold whitespace-nowrap transition-colors",
+              "flex-1 py-3 text-center text-xs sm:text-sm font-sans font-semibold transition-colors relative cursor-pointer",
               filter === item.id
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/30",
             )}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {filter === item.id && (
+              <span className="absolute bottom-0 inset-x-8 h-1 bg-primary rounded-full" />
+            )}
           </button>
         ))}
       </div>
-      <div>
+
+      {/* ── Notifications Stream ──────────────────────────────── */}
+      <div className="divide-y divide-border/60">
         {visible.map((item) => {
-          const Icon =
-            item.kind === "like" ? Heart : item.kind === "comment" ? MessageCircle : UserPlus;
-          const text =
-            item.kind === "like"
-              ? t("notifLiked")
-              : item.kind === "comment"
-                ? t("notifCommented")
-                : t("notifFollowed");
-          const body = (
-            <div
-              className={cn(
-                "flex gap-4 border-b border-border px-5 py-5 sm:px-8 transition-colors hover:bg-accent/30",
-                !item.isRead && "bg-accent/40",
-              )}
-            >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-primary">
-                <Icon className="size-4" />
-              </div>
-              <p className="text-sm leading-6">
-                <strong>{item.actor}</strong> {text}
-                <span className="ml-2 text-xs text-muted-foreground">{item.time}</span>
-              </p>
-              {!item.isRead && <span className="mt-2 size-2 shrink-0 rounded-full bg-primary" />}
-            </div>
-          );
-          return item.postId ? (
-            <Link key={item.id} to="/post/$id" params={{ id: item.postId }} className="block">
-              {body}
-            </Link>
-          ) : (
+          const isLike = item.kind === "like";
+          const isComment = item.kind === "comment" || item.kind === "response";
+          const isFollow = item.kind === "follow";
+
+          const ActionIcon = isLike ? Heart : isComment ? MessageCircle : UserPlus;
+          const actionText = isLike
+            ? "liked your post"
+            : isComment
+              ? "commented on your post"
+              : "started following you";
+
+          const destination = item.postId ? `/post/${item.postId}` : `/profile/${item.actorHandle}`;
+
+          return (
             <Link
               key={item.id}
-              to="/profile/$handle"
-              params={{ handle: item.actorHandle }}
-              className="block"
+              to={destination}
+              className={cn(
+                "flex items-center gap-3.5 p-4 hover:bg-muted/20 transition-colors block relative",
+                !item.isRead && "bg-primary/4",
+              )}
             >
-              {body}
+              {/* Actor Avatar with Icon Badge */}
+              <div className="relative shrink-0">
+                <Avatar className="size-10 ring-1 ring-border">
+                  {getAvatarUrl(item.actorAvatar) && (
+                    <AvatarImage src={getAvatarUrl(item.actorAvatar)!} alt={item.actor} />
+                  )}
+                  <AvatarFallback className="text-xs font-bold font-sans">
+                    {initialsOf(item.actor)}
+                  </AvatarFallback>
+                </Avatar>
+                <div
+                  className={cn(
+                    "absolute -bottom-1 -right-1 size-5 rounded-full flex items-center justify-center ring-2 ring-background",
+                    isLike && "bg-rose-500 text-white",
+                    isComment && "bg-blue-500 text-white",
+                    isFollow && "bg-primary text-primary-foreground",
+                  )}
+                >
+                  <ActionIcon className="size-3 stroke-[2]" />
+                </div>
+              </div>
+
+              {/* Notification Body */}
+              <div className="flex-1 min-w-0 font-sans text-xs sm:text-sm">
+                <p className="text-foreground leading-snug">
+                  <span className="font-bold hover:underline">{item.actor}</span>{" "}
+                  <span className="text-muted-foreground">{actionText}</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{item.time}</p>
+              </div>
+
+              {/* Follow Button if follower notification */}
+              {isFollow && item.actorHandle && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <FollowButton handle={item.actorHandle} />
+                </div>
+              )}
+
+              {/* Unread Indicator Dot */}
+              {!item.isRead && (
+                <span className="size-2 rounded-full bg-primary shrink-0 ml-1" />
+              )}
             </Link>
           );
         })}
+
         {!visible.length && (
-          <p className="px-6 py-20 text-center font-reading text-lg text-muted-foreground">
-            {t("noNotifications")}
-          </p>
+          <div className="py-20 text-center px-6 space-y-3">
+            <div className="size-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+              <Bell className="size-6" />
+            </div>
+            <h3 className="font-sans text-base font-bold text-foreground">No notifications yet</h3>
+            <p className="font-sans text-xs text-muted-foreground max-w-sm mx-auto">
+              When someone likes your posts, leaves a comment, or follows you, you'll see it here.
+            </p>
+          </div>
         )}
       </div>
     </AppShell>

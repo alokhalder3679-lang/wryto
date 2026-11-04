@@ -1,8 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   Bold,
   Check,
   Eye,
+  Hash,
   Heading,
   Italic,
   List,
@@ -10,13 +12,13 @@ import {
   PenLine,
   Quote,
   RotateCcw,
+  Sparkles,
   X,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { getAvatarUrl } from "@/lib/avatar";
 import { initialsOf } from "@/lib/inkline-data";
 import { useInkline } from "@/lib/inkline-context";
@@ -27,10 +29,10 @@ export const Route = createFileRoute("/create")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Write — Wryto" },
-      { name: "description", content: "Compose and publish a thoughtful manuscript on Wryto." },
-      { property: "og:title", content: "Write — Wryto" },
-      { property: "og:description", content: "Compose and publish a thoughtful manuscript on Wryto." },
+      { title: "Create Post — Wryto" },
+      { name: "description", content: "Compose and publish a thought, story, or poem on Wryto." },
+      { property: "og:title", content: "Create Post — Wryto" },
+      { property: "og:description", content: "Compose and publish a thought, story, or poem on Wryto." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -41,27 +43,39 @@ export const Route = createFileRoute("/create")({
 
 function CreateErrorComponent() {
   return (
-    <AppShell title="Write">
+    <AppShell title="Create">
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <h2 className="text-xl font-bold font-display">Unable to load the editor</h2>
-        <p className="max-w-md text-sm text-muted-foreground font-sans">
-          There was an issue opening the writing studio. Please refresh to try again.
+        <h2 className="text-xl font-bold font-sans">Unable to load the editor</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          There was an issue opening the composer. Please refresh to try again.
         </p>
-        <Button onClick={() => window.location.reload()}>Reload Studio</Button>
+        <Button onClick={() => window.location.reload()} className="rounded-full">Reload</Button>
       </div>
     </AppShell>
   );
 }
 
 const AVAILABLE_TAGS = [
-  "essay",
+  "thoughts",
+  "essays",
   "poetry",
-  "story",
   "philosophy",
   "culture",
   "craft",
-  "memoir",
+  "creative",
+  "reflections",
+  "technology",
 ] as const;
+
+function estimateReadTime(text: string): string {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const minutes = Math.max(1, Math.ceil(words / 200));
+  return `${minutes} min read`;
+}
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
 
 function renderInline(text: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
@@ -99,615 +113,366 @@ function renderInline(text: string): React.ReactNode {
         </em>,
       );
     }
-    lastIdx = regex.lastIndex;
+    lastIdx = match.index + token.length;
   }
   if (lastIdx < text.length) {
     parts.push(text.slice(lastIdx));
   }
-  return parts.length > 0 ? parts : text;
-}
-
-function renderStoryContent(body: string) {
-  const normalized = body.replace(/\r\n/g, "\n");
-  const rawBlocks = normalized
-    .split(/\n{2,}/)
-    .map((b) => b.trim())
-    .filter(Boolean);
-
-  const blocks = rawBlocks.length > 0 ? rawBlocks : [body.trim()];
-  let firstParagraphRendered = false;
-
-  return (
-    <div className="space-y-6 sm:space-y-7">
-      {blocks.map((block, idx) => {
-        // Blockquote
-        if (block.startsWith(">")) {
-          const quoteLines = block
-            .split("\n")
-            .map((line) => line.replace(/^>\s?/, ""))
-            .join("\n");
-          return (
-            <blockquote
-              key={idx}
-              className="border-l-2 border-primary pl-6 sm:pl-8 my-8 sm:my-10 italic font-display text-xl sm:text-2xl text-foreground/85 leading-relaxed whitespace-pre-line"
-            >
-              {renderInline(quoteLines)}
-            </blockquote>
-          );
-        }
-
-        // Heading 3
-        if (block.startsWith("### ")) {
-          return (
-            <h3
-              key={idx}
-              className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground pt-4 pb-1"
-            >
-              {renderInline(block.slice(4))}
-            </h3>
-          );
-        }
-
-        // Heading 2
-        if (block.startsWith("## ")) {
-          return (
-            <h2
-              key={idx}
-              className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground pt-6 pb-2"
-            >
-              {renderInline(block.slice(3))}
-            </h2>
-          );
-        }
-
-        // Heading 1
-        if (block.startsWith("# ")) {
-          return (
-            <h2
-              key={idx}
-              className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground pt-6 pb-2"
-            >
-              {renderInline(block.slice(2))}
-            </h2>
-          );
-        }
-
-        // Unordered List
-        if (block.split("\n").every((line) => line.startsWith("- ") || line.startsWith("* "))) {
-          const items = block.split("\n").map((line) => line.replace(/^[-*]\s+/, ""));
-          return (
-            <ul
-              key={idx}
-              className="list-disc list-inside space-y-2.5 my-4 pl-2 font-reading text-lg sm:text-xl leading-[1.85] text-foreground/90"
-            >
-              {items.map((item, itemIdx) => (
-                <li key={itemIdx}>{renderInline(item)}</li>
-              ))}
-            </ul>
-          );
-        }
-
-        // Regular Paragraph with drop-cap on the first prose paragraph
-        const isFirst = !firstParagraphRendered;
-        firstParagraphRendered = true;
-
-        if (isFirst) {
-          return (
-            <p
-              key={idx}
-              className="font-reading text-lg sm:text-xl leading-[1.85] text-foreground/90 whitespace-pre-line first-letter:float-left first-letter:text-5xl first-letter:font-display first-letter:mr-3 first-letter:text-primary first-letter:leading-none first-letter:pt-1 selection:bg-primary/20"
-            >
-              {renderInline(block)}
-            </p>
-          );
-        }
-
-        return (
-          <p
-            key={idx}
-            className="font-reading text-lg sm:text-xl leading-[1.85] text-foreground/90 whitespace-pre-line selection:bg-primary/20"
-          >
-            {renderInline(block)}
-          </p>
-        );
-      })}
-    </div>
-  );
+  return parts.length ? parts : text;
 }
 
 function CreatePage() {
   const navigate = useNavigate();
-  const { publishPost, user, profile, loading } = useInkline();
-
+  const { publishPost, user, profile, loading: authLoading } = useInkline();
+  const [postMode, setPostMode] = useState<"thought" | "story" | "poetry">("thought");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [tags, setTags] = useState<string[]>(["essay"]);
-  const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [tags, setTags] = useState<string[]>(["thoughts"]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Autosave state
-  const draftKey = `wryto_draft_${user?.id || "guest"}`;
-  const [draftRestored, setDraftRestored] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const draftKey = user ? `wryto_draft_${user.id}` : "wryto_draft_guest";
 
-  // Textarea DOM refs
-  const titleRef = useRef<HTMLTextAreaElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Redirect to auth if not authenticated
+  // Restore draft on mount
   useEffect(() => {
-    if (!loading && !user) {
-      void navigate({ to: "/auth", replace: true });
-    }
-  }, [loading, user, navigate]);
-
-  // Restore draft on initial load or user switch
-  useEffect(() => {
-    if (typeof window === "undefined") return;
     try {
-      const raw = localStorage.getItem(draftKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed) {
-          if (typeof parsed.title === "string") setTitle(parsed.title);
-          if (typeof parsed.body === "string") setBody(parsed.body);
-          if (Array.isArray(parsed.tags) && parsed.tags.length > 0) {
-            setTags(parsed.tags);
-          }
-          if (parsed.savedAt) {
-            setLastSaved(new Date(parsed.savedAt));
-          }
-          setSaveStatus("saved");
-        }
+      const saved = localStorage.getItem(draftKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.body) setBody(parsed.body);
+        if (parsed.title) setTitle(parsed.title);
+        if (Array.isArray(parsed.tags) && parsed.tags.length > 0) setTags(parsed.tags);
+        if (parsed.mode) setPostMode(parsed.mode);
+        setAutosaveStatus("saved");
       }
-    } catch (err) {
-      console.warn("Unable to restore draft from localStorage:", err);
-    } finally {
-      setDraftRestored(true);
+    } catch {
+      // ignore
     }
   }, [draftKey]);
 
   // Debounced autosave
   useEffect(() => {
-    if (!draftRestored || typeof window === "undefined") return;
-
-    const hasContent = Boolean(title.trim() || body.trim());
-    if (!hasContent) {
-      setSaveStatus("idle");
-      return;
-    }
-
-    setSaveStatus("saving");
+    if (!body && !title) return;
+    setAutosaveStatus("saving");
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(
           draftKey,
-          JSON.stringify({
-            title,
-            body,
-            tags,
-            savedAt: Date.now(),
-          }),
+          JSON.stringify({ title, body, tags, mode: postMode, updatedAt: Date.now() }),
         );
-        setSaveStatus("saved");
-        setLastSaved(new Date());
-      } catch (err) {
-        console.warn("Failed to autosave draft:", err);
+        setAutosaveStatus("saved");
+      } catch {
+        setAutosaveStatus("idle");
       }
-    }, 750);
+    }, 700);
 
     return () => clearTimeout(timer);
-  }, [title, body, tags, draftRestored, draftKey]);
+  }, [title, body, tags, postMode, draftKey]);
 
-  // Auto-resize title
   useEffect(() => {
-    if (titleRef.current) {
-      titleRef.current.style.height = "auto";
-      titleRef.current.style.height = `${titleRef.current.scrollHeight}px`;
-    }
-  }, [title]);
+    if (!authLoading && !user) void navigate({ to: "/auth", replace: true });
+  }, [authLoading, user, navigate]);
 
-  // Auto-resize body textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.max(420, textareaRef.current.scrollHeight)}px`;
-    }
-  }, [body, mode]);
-
-  // Markdown formatting handler
-  const applyFormatting = (format: "header" | "bold" | "italic" | "quote" | "list") => {
-    const textarea = textareaRef.current;
+  function insertFormatting(prefix: string, suffix = "") {
+    const textarea = bodyTextareaRef.current;
     if (!textarea) return;
-
-    const start = textarea.selectionStart ?? body.length;
-    const end = textarea.selectionEnd ?? body.length;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
     const selected = body.slice(start, end);
-    const before = body.slice(0, start);
-    const after = body.slice(end);
-
-    let replacement = "";
-    let selectionOffsetStart = 0;
-    let selectionOffsetEnd = 0;
-
-    switch (format) {
-      case "header": {
-        const needsNewline = start > 0 && !before.endsWith("\n\n");
-        const prefix = needsNewline ? (before.endsWith("\n") ? "\n# " : "\n\n# ") : "# ";
-        const content = selected || "Heading";
-        replacement = `${prefix}${content}\n\n`;
-        selectionOffsetStart = prefix.length;
-        selectionOffsetEnd = prefix.length + content.length;
-        break;
-      }
-      case "bold": {
-        const content = selected || "bold text";
-        replacement = `**${content}**`;
-        selectionOffsetStart = 2;
-        selectionOffsetEnd = 2 + content.length;
-        break;
-      }
-      case "italic": {
-        const content = selected || "italic text";
-        replacement = `*${content}*`;
-        selectionOffsetStart = 1;
-        selectionOffsetEnd = 1 + content.length;
-        break;
-      }
-      case "quote": {
-        const needsNewline = start > 0 && !before.endsWith("\n\n");
-        const prefix = needsNewline ? (before.endsWith("\n") ? "\n> " : "\n\n> ") : "> ";
-        const content = selected || "A thoughtful reflection or citation...";
-        replacement = `${prefix}${content}\n\n`;
-        selectionOffsetStart = prefix.length;
-        selectionOffsetEnd = prefix.length + content.length;
-        break;
-      }
-      case "list": {
-        const needsNewline = start > 0 && !before.endsWith("\n\n");
-        const prefix = needsNewline ? (before.endsWith("\n") ? "\n- " : "\n\n- ") : "- ";
-        const content = selected || "List item";
-        replacement = `${prefix}${content}\n`;
-        selectionOffsetStart = prefix.length;
-        selectionOffsetEnd = prefix.length + content.length;
-        break;
-      }
-    }
-
-    const nextBody = before + replacement + after;
-    if (nextBody.length > 5000) {
-      toast.error("Manuscript cannot exceed 5,000 characters.");
-      return;
-    }
-
+    const replacement = `${prefix}${selected || "text"}${suffix}`;
+    const nextBody = body.slice(0, start) + replacement + body.slice(end);
     setBody(nextBody);
-
     requestAnimationFrame(() => {
       textarea.focus();
-      if (selected.length > 0) {
-        const cursorAfter = start + replacement.length;
-        textarea.setSelectionRange(cursorAfter, cursorAfter);
-      } else {
-        textarea.setSelectionRange(start + selectionOffsetStart, start + selectionOffsetEnd);
-      }
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected || "text").length);
     });
-  };
+  }
 
-  // Word count and read time
-  const wordCount = body.trim() ? body.trim().split(/\s+/).filter(Boolean).length : 0;
-  const readMinutes = Math.max(1, Math.ceil(wordCount / 200));
-  const wordCountLabel = `${wordCount} ${wordCount === 1 ? "word" : "words"} · ~${readMinutes} min read`;
+  function handleReset() {
+    if (!window.confirm("Clear this draft and start over?")) return;
+    setTitle("");
+    setBody("");
+    setTags(["thoughts"]);
+    setAutosaveStatus("idle");
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
+    toast.success("Draft cleared");
+  }
 
-  // Tag toggler
-  const toggleTag = (tag: string) => {
+  function toggleTag(tag: string) {
     if (tags.includes(tag)) {
-      if (tags.length === 1) {
-        toast.info("At least one topic tag is recommended.");
-        return;
+      if (tags.length > 1) {
+        setTags(tags.filter((t) => t !== tag));
       }
-      setTags(tags.filter((t) => t !== tag));
     } else {
       setTags([...tags, tag]);
     }
-  };
+  }
 
-  // Clear draft
-  const clearDraft = () => {
-    if (!title.trim() && !body.trim()) return;
-    if (!window.confirm("Discard this draft? All unsaved title and content will be cleared.")) {
-      return;
-    }
-    setTitle("");
-    setBody("");
-    setTags(["essay"]);
-    try {
-      localStorage.removeItem(draftKey);
-    } catch {
-      // ignore
-    }
-    setSaveStatus("idle");
-    setLastSaved(null);
-    toast.info("Draft discarded");
-  };
-
-  // Publish manuscript
-  const publish = async () => {
+  async function handlePublish() {
     if (!body.trim() || busy) return;
     setBusy(true);
     setError(null);
-
-    const id = await publishPost({
-      ...(title.trim() ? { title: title.trim() } : {}),
-      body: body.trim(),
-      tags: tags.length > 0 ? tags : ["essay"],
-    });
-
-    setBusy(false);
-    if (!id) {
-      setError("We couldn't publish your story. Please try again.");
-      return;
-    }
-
-    // Clear draft from localStorage once successfully published
     try {
-      localStorage.removeItem(draftKey);
-    } catch {
-      // ignore
+      const id = await publishPost({
+        title: postMode === "story" && title.trim() ? title.trim() : undefined,
+        body: body.trim(),
+        tags,
+      });
+
+      if (!id) {
+        setError("We couldn't publish your post. Please check your connection and try again.");
+        setBusy(false);
+        return;
+      }
+
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {
+        // ignore
+      }
+
+      toast.success("Post published successfully!");
+      await navigate({ to: "/post/$id", params: { id } });
+    } catch (err) {
+      console.error("Publish error:", err);
+      setError("An unexpected error occurred. Please try again.");
+      setBusy(false);
     }
+  }
 
-    toast.success("Manuscript published successfully");
-    await navigate({ to: "/post/$id", params: { id } });
-  };
-
-  // Author details for preview attribution
-  const authorName =
-    profile?.name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Writer";
-  const authorHandle = profile?.handle || user?.user_metadata?.handle || "writer";
-  const authorInitials = profile?.initials || initialsOf(authorName);
-  const kicker = tags.length > 0 ? tags[0].replace(/^#/, "").toUpperCase() : "ESSAY";
+  const words = wordCount(body);
+  const readTime = estimateReadTime(body);
 
   return (
-    <AppShell
-      title="Manuscript Studio"
-      action={
+    <AppShell>
+      {/* ── Studio Sticky Header ─────────────────────────────── */}
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border/70 bg-background/90 px-4 sm:px-6 h-14 backdrop-blur-md">
         <div className="flex items-center gap-2">
+          <Link
+            to="/feed"
+            className="p-1.5 -ml-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            aria-label="Back to feed"
+          >
+            <ArrowLeft className="size-5" />
+          </Link>
+          <span className="font-sans text-base font-bold text-foreground">Create Post</span>
+        </div>
+
+        {/* Header Right Actions */}
+        <div className="flex items-center gap-2">
+          {autosaveStatus === "saved" && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-sans text-muted-foreground">
+              <Check className="size-3 text-emerald-500" /> Draft saved
+            </span>
+          )}
+          {autosaveStatus === "saving" && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-sans text-muted-foreground">
+              <Loader2 className="size-3 animate-spin text-primary" /> Saving…
+            </span>
+          )}
+
+          {/* Toggle Edit vs Preview */}
+          <div className="inline-flex rounded-full border border-border/70 p-0.5 bg-muted/40">
+            <button
+              type="button"
+              onClick={() => setViewMode("edit")}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-sans font-semibold transition-all cursor-pointer",
+                viewMode === "edit"
+                  ? "bg-background text-foreground shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("preview")}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-sans font-semibold transition-all cursor-pointer",
+                viewMode === "preview"
+                  ? "bg-background text-foreground shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Preview
+            </button>
+          </div>
+
           <Button
-            size="sm"
+            onClick={() => void handlePublish()}
             disabled={!body.trim() || busy}
-            onClick={() => void publish()}
-            className="h-9 min-h-[44px] sm:min-h-0 rounded-full bg-primary px-4 sm:px-5 text-xs sm:text-sm font-sans font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            className="rounded-full px-5 h-9 font-semibold text-xs bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
           >
             {busy ? (
               <>
-                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                <span>Publishing…</span>
+                <Loader2 className="size-3.5 animate-spin mr-1.5" />
+                Publishing…
               </>
             ) : (
-              <>
-                <PenLine className="mr-1.5 size-3.5" />
-                <span>Publish Story</span>
-              </>
+              "Publish"
             )}
           </Button>
         </div>
-      }
-    >
-      {/* Studio Helper Bar */}
-      <div className="sticky top-16 z-10 border-b border-border/50 bg-background/90 backdrop-blur-md">
-        <div className="max-w-3xl mx-auto px-4 sm:px-8 py-2 flex items-center justify-between gap-3 flex-wrap">
-          {/* Left: Mode toggle (Edit / Preview) & Formatting buttons */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {/* Mode switch tabs */}
-            <div className="inline-flex items-center rounded-lg bg-muted/60 p-0.5 border border-border/50">
-              <button
-                type="button"
-                onClick={() => setMode("edit")}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-sans font-medium transition-all min-h-[36px] sm:min-h-0 cursor-pointer",
-                  mode === "edit"
-                    ? "bg-background text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-label="Edit mode"
-              >
-                <PenLine className="size-3.5" />
-                <span>Edit</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("preview")}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-sans font-medium transition-all min-h-[36px] sm:min-h-0 cursor-pointer",
-                  mode === "preview"
-                    ? "bg-background text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-label="Preview mode"
-              >
-                <Eye className="size-3.5" />
-                <span>Preview</span>
-              </button>
-            </div>
-
-            {/* Formatting Toolbar (active in Edit mode) */}
-            {mode === "edit" && (
-              <div className="flex items-center gap-0.5 border-l border-border/60 pl-2 sm:pl-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title="Header (#)"
-                  aria-label="Heading formatting"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => applyFormatting("header")}
-                  className="size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 cursor-pointer"
-                >
-                  <Heading className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title="Bold (**text**)"
-                  aria-label="Bold formatting"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => applyFormatting("bold")}
-                  className="size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 cursor-pointer"
-                >
-                  <Bold className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title="Italic (*text*)"
-                  aria-label="Italic formatting"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => applyFormatting("italic")}
-                  className="size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 cursor-pointer"
-                >
-                  <Italic className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title="Quote (>)"
-                  aria-label="Quote formatting"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => applyFormatting("quote")}
-                  className="size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 cursor-pointer"
-                >
-                  <Quote className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title="List (-)"
-                  aria-label="List formatting"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => applyFormatting("list")}
-                  className="size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 cursor-pointer"
-                >
-                  <List className="size-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Autosave status, Clear draft, Word count & read time */}
-          <div className="flex items-center gap-3 text-xs font-sans text-muted-foreground ml-auto">
-            {/* Draft status indicator */}
-            <div
-              className="flex items-center gap-1.5"
-              title={lastSaved ? `Draft last saved at ${lastSaved.toLocaleTimeString()}` : "Autosave enabled"}
-            >
-              {saveStatus === "saving" && (
-                <span className="inline-flex items-center gap-1 text-primary">
-                  <Loader2 className="size-3 animate-spin" />
-                  <span className="hidden sm:inline">Saving…</span>
-                </span>
-              )}
-              {saveStatus === "saved" && (
-                <span className="inline-flex items-center gap-1 text-primary">
-                  <Check className="size-3.5 text-primary stroke-[2.5]" />
-                  <span className="hidden sm:inline">Draft saved</span>
-                </span>
-              )}
-            </div>
-
-            {/* Clear draft option */}
-            {(title.trim() || body.trim()) && (
-              <button
-                type="button"
-                onClick={clearDraft}
-                className="inline-flex items-center gap-1 text-muted-foreground hover:text-destructive transition-colors py-1 px-1.5 rounded min-h-[36px] sm:min-h-0 cursor-pointer"
-                title="Discard draft"
-                aria-label="Clear manuscript draft"
-              >
-                <RotateCcw className="size-3" />
-                <span className="hidden md:inline">Reset</span>
-              </button>
-            )}
-
-            {/* Word count & reading time pill */}
-            <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground border border-border/40">
-              <span>{wordCountLabel}</span>
-              <span className="text-border">·</span>
-              <span className={cn(body.length > 4800 && "text-amber-500 font-semibold")}>
-                {body.length} / 5,000
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Centered Typewriter Manuscript Canvas */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
-        {mode === "edit" ? (
-          <div className="space-y-6">
-            {/* Title Input */}
-            <textarea
-              ref={titleRef}
-              rows={1}
-              value={title}
-              maxLength={150}
-              onChange={(e) => setTitle(e.target.value.replace(/[\r\n]/g, " ").slice(0, 150))}
-              placeholder="Title (optional)"
-              aria-label="Story title"
-              className="font-display text-3xl sm:text-5xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/40 border-none outline-none bg-transparent w-full leading-tight resize-none focus-visible:ring-0 p-0 shadow-none overflow-hidden"
-            />
+      {/* ── Main Composer Container ──────────────────────────── */}
+      <div className="p-4 sm:p-6 space-y-5">
+        {/* Post Format Selector */}
+        <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+          <span className="text-xs font-sans font-medium text-muted-foreground mr-1">Format:</span>
+          <button
+            type="button"
+            onClick={() => setPostMode("thought")}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-sans font-medium transition-all cursor-pointer",
+              postMode === "thought"
+                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            💭 Thought
+          </button>
+          <button
+            type="button"
+            onClick={() => setPostMode("story")}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-sans font-medium transition-all cursor-pointer",
+              postMode === "story"
+                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            📖 Story / Essay
+          </button>
+          <button
+            type="button"
+            onClick={() => setPostMode("poetry")}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-sans font-medium transition-all cursor-pointer",
+              postMode === "poetry"
+                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            ✍️ Poetry
+          </button>
+        </div>
 
-            {/* Body Textarea */}
-            <Textarea
-              ref={textareaRef}
-              value={body}
-              onChange={(e) => setBody(e.target.value.slice(0, 5000))}
-              placeholder="Tell your story… Write in natural paragraphs or use markdown formatting."
-              aria-label="Story manuscript body"
-              className="font-reading text-lg sm:text-xl leading-[1.85] text-foreground placeholder:text-muted-foreground/40 border-none outline-none bg-transparent min-h-[420px] resize-none w-full focus-visible:ring-0 p-0 shadow-none selection:bg-primary/20"
-            />
+        {viewMode === "edit" ? (
+          <div className="space-y-4">
+            {/* Story Title Input (Visible when in Story Mode) */}
+            {postMode === "story" && (
+              <div>
+                <input
+                  type="text"
+                  value={title}
+                  maxLength={150}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Title of your story or essay"
+                  className="w-full bg-transparent text-xl sm:text-2xl font-bold font-sans text-foreground placeholder:text-muted-foreground/50 border-b border-border/60 pb-2 outline-none"
+                />
+              </div>
+            )}
 
-            {/* Mobile Word Count summary */}
-            <div className="sm:hidden flex items-center justify-between py-2 text-xs font-sans text-muted-foreground border-t border-border/40">
-              <span>{wordCountLabel}</span>
-              <span className={cn(body.length > 4800 && "text-amber-500 font-semibold")}>
-                {body.length} / 5,000
-              </span>
+            {/* Markdown Toolbar Helper */}
+            <div className="flex items-center gap-1 p-1.5 rounded-xl bg-muted/40 border border-border/60 text-muted-foreground overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => insertFormatting("**", "**")}
+                className="p-2 rounded-lg hover:bg-background hover:text-foreground transition-colors cursor-pointer"
+                title="Bold"
+              >
+                <Bold className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("*", "*")}
+                className="p-2 rounded-lg hover:bg-background hover:text-foreground transition-colors cursor-pointer"
+                title="Italic"
+              >
+                <Italic className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("> ")}
+                className="p-2 rounded-lg hover:bg-background hover:text-foreground transition-colors cursor-pointer"
+                title="Quote"
+              >
+                <Quote className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("### ")}
+                className="p-2 rounded-lg hover:bg-background hover:text-foreground transition-colors cursor-pointer"
+                title="Heading"
+              >
+                <Heading className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("- ")}
+                className="p-2 rounded-lg hover:bg-background hover:text-foreground transition-colors cursor-pointer"
+                title="List item"
+              >
+                <List className="size-4" />
+              </button>
+              <div className="ml-auto flex items-center gap-3 pr-2 text-xs font-sans text-muted-foreground shrink-0">
+                <span>{words} words</span>
+                <span>·</span>
+                <span>{readTime}</span>
+                <span>·</span>
+                <span>{body.length} / 5,000</span>
+              </div>
             </div>
 
+            {/* Body Textarea */}
+            <textarea
+              ref={bodyTextareaRef}
+              value={body}
+              onChange={(e) => setBody(e.target.value.slice(0, 5000))}
+              placeholder={
+                postMode === "poetry"
+                  ? "Compose your poem here...\nStanzas and linebreaks are naturally preserved."
+                  : postMode === "story"
+                    ? "Start writing your essay or story..."
+                    : "Share what's on your mind..."
+              }
+              className={cn(
+                "w-full bg-transparent min-h-[360px] text-base leading-relaxed font-sans text-foreground placeholder:text-muted-foreground/50 border-none outline-none resize-none p-1",
+                postMode === "poetry" && "font-serif italic text-lg leading-loose",
+              )}
+            />
+
             {/* Topic Tags Selector */}
-            <div className="pt-6 border-t border-border/50">
-              <p className="mb-3 text-xs font-sans font-semibold uppercase tracking-wider text-muted-foreground">
-                Topic Category
-              </p>
-              <div className="flex flex-wrap gap-2">
+            <div className="pt-3 border-t border-border/50 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-sans font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Hash className="size-3.5 text-primary" /> Topic Tags
+                </span>
+                <span className="text-xs text-muted-foreground">Select topics for discovery</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
                 {AVAILABLE_TAGS.map((tag) => {
-                  const isSelected = tags.includes(tag);
-                  return isSelected ? (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-primary px-3.5 py-1.5 text-xs font-sans font-semibold text-primary-foreground shadow-xs transition-all"
-                    >
-                      #{tag}
-                      <button
-                        type="button"
-                        onClick={() => toggleTag(tag)}
-                        className="rounded-full p-0.5 hover:bg-primary-foreground/20 transition-colors cursor-pointer min-h-[24px] min-w-[24px] flex items-center justify-center"
-                        aria-label={`Remove #${tag} tag`}
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </span>
-                  ) : (
+                  const active = tags.includes(tag);
+                  return (
                     <button
                       key={tag}
                       type="button"
                       onClick={() => toggleTag(tag)}
-                      className="rounded-full border border-border/60 bg-muted/30 px-3.5 py-1.5 text-xs font-sans font-medium text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground transition-all cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-sans font-medium transition-all cursor-pointer",
+                        active
+                          ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50",
+                      )}
                     >
                       #{tag}
                     </button>
@@ -716,100 +481,62 @@ function CreatePage() {
               </div>
             </div>
 
-            {error && <p className="mt-4 text-sm font-sans text-destructive">{error}</p>}
+            {/* Error Message */}
+            {error && (
+              <p className="text-sm font-sans font-medium text-destructive">{error}</p>
+            )}
 
-            <p className="pt-4 text-xs font-sans text-muted-foreground/70">
-              Distraction-free manuscript editor. Markdown formatting is supported (# header, **bold**, *italic*, &gt; quote, - list).
-            </p>
+            {/* Draft Reset Button */}
+            <div className="flex justify-end pt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="text-xs font-sans text-muted-foreground hover:text-destructive gap-1.5"
+              >
+                <RotateCcw className="size-3.5" />
+                Clear draft
+              </Button>
+            </div>
           </div>
         ) : (
-          /* Preview Mode Matching /post/$id */
-          <div className="space-y-8 animate-in fade-in duration-200">
-            {/* Category Kicker */}
-            <div className="mb-3">
-              <span className="text-xs font-sans tracking-widest text-primary uppercase font-semibold inline-block">
-                {kicker}
-              </span>
-            </div>
-
-            {/* Story Headline */}
-            {title.trim() ? (
-              <h1 className="font-display text-3xl sm:text-5xl font-bold tracking-tight text-foreground leading-[1.18] mb-6 sm:mb-8">
-                {title.trim()}
-              </h1>
-            ) : (
-              <h1 className="font-display text-2xl sm:text-3xl font-semibold italic text-muted-foreground/60 mb-6">
-                Untitled Manuscript
-              </h1>
-            )}
-
-            {/* Byline Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 border-y border-border/60">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <Avatar className="size-11 sm:size-12 rounded-full border border-border/80 shadow-xs">
-                  {profile?.avatarUrl && (
-                    <AvatarImage
-                      src={getAvatarUrl(profile.avatarUrl) || undefined}
-                      alt={authorName}
-                      className="object-cover"
-                    />
-                  )}
-                  <AvatarFallback className="bg-accent text-sm font-semibold text-accent-foreground font-sans">
-                    {authorInitials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-foreground text-sm sm:text-base font-sans">
-                      {authorName}
-                    </span>
-                    <span className="text-xs font-sans text-muted-foreground">
-                      @{authorHandle}
-                    </span>
-                  </div>
-                  {profile?.bio && (
-                    <p className="text-xs font-sans text-muted-foreground line-clamp-1 mt-0.5 max-w-md">
-                      {profile.bio}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 text-xs font-sans text-muted-foreground mt-1">
-                    <span>Today · Manuscript Draft</span>
-                    <span className="text-muted-foreground/60 select-none">·</span>
-                    <span>{readMinutes} min read</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="inline-flex items-center gap-1.5 text-xs font-sans font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full self-start sm:self-center">
-                <Eye className="size-3.5" />
-                <span>Reading Preview</span>
+          /* ── Live Preview Mode ────────────────────────────── */
+          <div className="rounded-2xl border border-border/70 p-5 bg-card/50 shadow-xs space-y-4">
+            <div className="flex items-center gap-3">
+              <Avatar className="size-10 ring-1 ring-border">
+                {getAvatarUrl(profile?.avatarUrl) && (
+                  <AvatarImage src={getAvatarUrl(profile?.avatarUrl)!} alt={profile?.name ?? "User"} />
+                )}
+                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                  {profile?.name ? initialsOf(profile.name) : "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-bold font-sans text-foreground">{profile?.name ?? "You"}</p>
+                <p className="text-xs text-muted-foreground font-sans">@{profile?.handle ?? "you"} · Just now · {readTime}</p>
               </div>
             </div>
 
-            {/* Body Content with drop-cap and reading typography */}
-            {body.trim() ? (
-              <div className="pt-2">
-                {renderStoryContent(body)}
-              </div>
-            ) : (
-              <div className="py-16 text-center text-muted-foreground/60 font-reading text-lg italic">
-                Your story body is currently empty. Switch back to Edit to begin writing.
-              </div>
+            {title.trim() && (
+              <h2 className="text-xl font-bold font-sans text-foreground">{title}</h2>
             )}
 
-            {/* Tags footer */}
-            {tags.length > 0 && (
-              <div className="pt-8 border-t border-border/60 flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs font-sans font-medium text-muted-foreground bg-muted/40 px-3 py-1 rounded-full border border-border/50"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div
+              className={cn(
+                "text-sm sm:text-base leading-relaxed text-foreground whitespace-pre-line",
+                postMode === "poetry" && "font-serif italic leading-loose",
+              )}
+            >
+              {renderInline(body || "Your post content preview will appear here.")}
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {tags.map((t) => (
+                <span key={t} className="text-xs font-sans font-medium text-primary">
+                  #{t}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>

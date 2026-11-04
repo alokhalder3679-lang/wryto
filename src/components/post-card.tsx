@@ -2,7 +2,11 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ProfilePreview } from "@/components/profile-preview";
 import {
   Bookmark,
+  Check,
+  ChevronDown,
+  ChevronUp,
   Flag,
+  Heart,
   Loader2,
   MessageCircle,
   MoreHorizontal,
@@ -80,13 +84,11 @@ export function ClapIcon({
 }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      {/* Applause rays */}
       <g stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none">
         <path d="M5.5 4.5l1.5 1.5" />
         <path d="M3 8h2" />
         <path d="M8 2.5v2" />
       </g>
-      {/* Clapping hands outline/fill */}
       <path
         d="M14.5 4.5a2 2 0 0 0-2.8 0L9.8 6.4a2 2 0 0 0-.6 1.4v4.7l-2.1-2.1a2 2 0 0 0-2.8 2.8l5.2 5.2a6 6 0 0 0 8.5 0l2.5-2.5a2 2 0 0 0 0-2.8l-1.5-1.5a2 2 0 0 0-2.8 0l-.7.7V6.5a2 2 0 0 0-2-2z"
         fill={filled ? "currentColor" : "none"}
@@ -113,9 +115,9 @@ export function TopicChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-sans font-medium transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center cursor-pointer",
+        "shrink-0 rounded-full border px-3 py-1 text-xs font-sans font-medium transition-all min-h-[36px] sm:min-h-0 flex items-center justify-center cursor-pointer",
         active
-          ? "border-primary bg-primary text-primary-foreground shadow-xs font-semibold"
+          ? "border-primary bg-primary text-primary-foreground shadow-2xs font-semibold"
           : "border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:border-border",
       )}
     >
@@ -131,15 +133,18 @@ export function FollowButton({ handle }: { handle: string }) {
   const [busy, setBusy] = useState(false);
   const active = followed.has(handle);
   if (profile?.handle === handle) return null;
+
   return (
     <Button
       variant={active ? "outline" : "default"}
       size="sm"
       disabled={busy}
       className={cn(
-        "h-8 min-h-[36px] sm:min-h-0 min-w-[84px] rounded-full px-3 text-xs font-sans font-medium gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer",
+        "h-7 min-h-[36px] sm:min-h-0 min-w-[76px] rounded-full px-3 text-xs font-sans font-semibold gap-1 transition-all duration-150 active:scale-95 cursor-pointer",
         busy && "opacity-80",
-        active && "hover:border-destructive hover:text-destructive",
+        active
+          ? "border-border hover:border-destructive hover:text-destructive hover:bg-destructive/10"
+          : "bg-foreground text-background hover:bg-foreground/90",
       )}
       onClick={async (event) => {
         event.preventDefault();
@@ -156,17 +161,14 @@ export function FollowButton({ handle }: { handle: string }) {
         }
       }}
     >
-      {busy && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
-      <span className={cn("transition-opacity duration-150", busy && "opacity-80")}>
-        {active ? t("unfollow") : t("follow")}
-      </span>
+      {busy && <Loader2 className="size-3 animate-spin" aria-hidden />}
+      <span>{active ? "Following" : "Follow"}</span>
     </Button>
   );
 }
 
 export function PostCard({ post, full = false }: { post: Post; full?: boolean }) {
   const { liked, toggleLike, user, profile, refresh } = useInkline();
-  const { t } = useSettings();
   const navigate = useNavigate();
   const isLiked = liked.has(post.id);
   const isMine = !!profile && profile.handle === post.author.handle;
@@ -176,44 +178,24 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
   const [reportOpen, setReportOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
   const [bookmarked, setBookmarked] = useState<boolean>(() => isBookmarked(post.id));
+  const [expanded, setExpanded] = useState(full);
+
+  const isLong = post.body.length > 380;
+  const isPoetry =
+    Array.isArray(post.tags) && post.tags.some((t) => t.toLowerCase().includes("poet"));
 
   useEffect(() => {
-    const onToggle = (e: Event) => {
+    const handleBookmarkEvent = (e: Event) => {
       const detail = (e as CustomEvent<{ id: string; bookmarked: boolean }>).detail;
       if (detail && detail.id === post.id) {
         setBookmarked(detail.bookmarked);
       }
     };
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === BOOKMARKS_KEY) {
-        setBookmarked(isBookmarked(post.id));
-      }
-    };
-    window.addEventListener("wryto-bookmark-toggle", onToggle);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener("wryto-bookmark-toggle", onToggle);
-      window.removeEventListener("storage", onStorage);
-    };
+    window.addEventListener("wryto-bookmark-toggle", handleBookmarkEvent);
+    return () => window.removeEventListener("wryto-bookmark-toggle", handleBookmarkEvent);
   }, [post.id]);
 
-  async function saveEdit() {
-    if (!draft.trim()) return;
-    setBusy(true);
-    await supabase.from("posts").update({ body: draft.trim() }).eq("id", post.id);
-    setBusy(false);
-    setEditing(false);
-    await refresh();
-  }
-
-  async function remove() {
-    if (!window.confirm("Delete this story? This can't be undone.")) return;
-    await supabase.from("posts").delete().eq("id", post.id);
-    await refresh();
-    if (full) void navigate({ to: "/feed" });
-  }
-
-  const handleClap = async (e: React.MouseEvent) => {
+  async function handleToggleLike(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
@@ -221,66 +203,87 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
       return;
     }
     await toggleLike(post.id);
-  };
+  }
 
-  const handleBookmark = (e: React.MouseEvent) => {
+  function handleToggleBookmark(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    const nextState = toggleBookmark(post.id);
-    setBookmarked(nextState);
-    if (nextState) {
-      toast.success("Saved to your reading list");
-    } else {
-      toast.success("Removed from your reading list");
-    }
-  };
+    const next = toggleBookmark(post.id);
+    setBookmarked(next);
+    toast.success(next ? "Post saved to your bookmarks" : "Removed from bookmarks");
+  }
 
-  const handleShare = async (e: React.MouseEvent) => {
+  async function handleShare(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     const url = `${window.location.origin}/post/${post.id}`;
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const input = document.createElement("input");
-        input.value = url;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand("copy");
-        document.body.removeChild(input);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: post.title || `Post by ${post.author.name} on Wryto`,
+          text: post.body.slice(0, 100),
+          url,
+        });
+        return;
+      } catch {
+        // Fallback to clipboard
       }
-      toast.success("Story link copied to clipboard");
-    } catch {
-      toast.error("Couldn't copy link to clipboard");
     }
-  };
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Post link copied to clipboard!");
+    } catch {
+      toast.error("Could not copy link");
+    }
+  }
 
-  // Category kicker tag (first tag or fallback to STORY)
-  const kicker =
-    post.tags && post.tags.length > 0
-      ? post.tags[0].replace(/^#/, "").toUpperCase()
-      : "STORY";
+  async function saveEdit() {
+    if (!draft.trim() || busy) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from("posts")
+      .update({ body: draft.trim(), content: draft.trim() })
+      .eq("id", post.id);
+    setBusy(false);
+    if (error) {
+      toast.error("Couldn't save changes. Please try again.");
+      return;
+    }
+    toast.success("Post updated");
+    setEditing(false);
+    await refresh();
+  }
+
+  async function remove() {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    setBusy(true);
+    const { error } = await supabase.from("posts").delete().eq("id", post.id);
+    setBusy(false);
+    if (error) {
+      toast.error("Couldn't delete post. Please try again.");
+      return;
+    }
+    toast.success("Post deleted");
+    await refresh();
+  }
 
   return (
     <article
       className={cn(
-        "relative transition-colors",
-        full
-          ? "px-5 py-6 sm:px-8 border-b border-border/50"
-          : "border-b border-border/50 pb-8 mb-8 px-5 sm:px-8 last:border-b-0 last:mb-0",
+        "border-b border-border/70 p-4 sm:p-5 hover:bg-muted/15 transition-colors relative group",
+        full && "border-b-0 hover:bg-transparent",
       )}
     >
-      {/* Byline Metadata Header */}
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex gap-3">
+        {/* Author Avatar Column */}
+        <div className="shrink-0 mt-0.5">
           <ProfilePreview handle={post.author.handle}>
             <Link
               to="/profile/$handle"
               params={{ handle: post.author.handle }}
-              className="shrink-0 block"
+              className="block cursor-pointer"
             >
-              <Avatar className="size-8 sm:size-9 rounded-full border border-border/80 shadow-xs">
+              <Avatar className="size-10 ring-1 ring-border shadow-2xs transition-transform group-hover:scale-102">
                 {getAvatarUrl(post.author.avatarUrl) && (
                   <AvatarImage
                     src={getAvatarUrl(post.author.avatarUrl)!}
@@ -288,271 +291,285 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                     className="object-cover"
                   />
                 )}
-                <AvatarFallback className="bg-accent text-xs font-medium text-accent-foreground font-sans">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold font-sans">
                   {post.author.initials}
                 </AvatarFallback>
               </Avatar>
             </Link>
           </ProfilePreview>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-sans min-w-0">
-            <ProfilePreview handle={post.author.handle}>
-              <Link
-                to="/profile/$handle"
-                params={{ handle: post.author.handle }}
-                className="font-medium text-foreground hover:text-primary transition-colors truncate"
-              >
-                {post.author.name}
-              </Link>
-            </ProfilePreview>
-            <span className="text-muted-foreground/60 select-none">·</span>
-            <span className="text-muted-foreground">{post.time}</span>
-            <span className="text-muted-foreground/60 select-none">·</span>
-            <span className="text-muted-foreground">{post.readTime}</span>
-          </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <FollowButton handle={post.author.handle} />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-full text-muted-foreground hover:text-foreground cursor-pointer"
-                aria-label="Story options"
+
+        {/* Content Column */}
+        <div className="flex-1 min-w-0">
+          {/* Header Row: Author details, timestamp, menu */}
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+              <ProfilePreview handle={post.author.handle}>
+                <Link
+                  to="/profile/$handle"
+                  params={{ handle: post.author.handle }}
+                  className="font-sans font-bold text-sm text-foreground hover:underline truncate cursor-pointer"
+                >
+                  {post.author.name}
+                </Link>
+              </ProfilePreview>
+              <span className="font-sans text-xs text-muted-foreground truncate">
+                @{post.author.handle}
+              </span>
+              <span className="text-muted-foreground/60 text-xs">·</span>
+              <Link
+                to="/post/$id"
+                params={{ id: post.id }}
+                className="font-sans text-xs text-muted-foreground hover:underline shrink-0"
               >
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-48 rounded-xl border border-border/70 bg-popover/95 backdrop-blur-md p-1 shadow-lg"
-            >
-              {isMine && !editing && (
-                <>
+                {post.time}
+              </Link>
+            </div>
+
+            {/* Top Right Actions */}
+            <div className="flex items-center gap-1 shrink-0">
+              <FollowButton handle={post.author.handle} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 rounded-full text-muted-foreground hover:text-foreground cursor-pointer"
+                    aria-label="Post options"
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-48 rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg backdrop-blur-md"
+                >
+                  {isMine && !editing && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => setEditing(true)}
+                        className="cursor-pointer gap-2 text-xs font-sans"
+                      >
+                        <Pencil className="size-3.5" />
+                        <span>Edit Post</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => void remove()}
+                        className="cursor-pointer gap-2 text-xs font-sans text-destructive focus:text-destructive focus:bg-destructive/10"
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span>Delete Post</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="my-1 bg-border/50" />
+                    </>
+                  )}
                   <DropdownMenuItem
-                    onClick={() => setEditing(true)}
+                    onClick={handleShare}
                     className="cursor-pointer gap-2 text-xs font-sans"
                   >
-                    <Pencil className="size-3.5" />
-                    <span>{t("editPost")}</span>
+                    <Share2 className="size-3.5 text-primary" />
+                    <span>Copy Link</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => void remove()}
-                    className="cursor-pointer gap-2 text-xs font-sans text-destructive focus:text-destructive focus:bg-destructive/10"
-                  >
-                    <Trash2 className="size-3.5" />
-                    <span>{t("deletePost")}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-1 bg-border/60" />
-                </>
-              )}
-              <DropdownMenuItem
-                onClick={() => {
-                  if (!user) {
-                    void navigate({ to: "/auth" });
-                    return;
-                  }
-                  setReportOpen(true);
-                }}
-                className="cursor-pointer gap-2 text-xs font-sans text-muted-foreground hover:text-foreground"
-              >
-                <Flag className="size-3.5 text-amber-500" />
-                <span>{t("report")}</span>
-              </DropdownMenuItem>
-              {!isMine && (
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (!user) {
-                      void navigate({ to: "/auth" });
-                      return;
-                    }
-                    setBlockOpen(true);
-                  }}
-                  className="cursor-pointer gap-2 text-xs font-sans text-destructive focus:text-destructive focus:bg-destructive/10"
+                  {!isMine && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          if (!user) {
+                            void navigate({ to: "/auth" });
+                            return;
+                          }
+                          setReportOpen(true);
+                        }}
+                        className="cursor-pointer gap-2 text-xs font-sans text-muted-foreground hover:text-foreground"
+                      >
+                        <Flag className="size-3.5 text-amber-500" />
+                        <span>Report Post</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          if (!user) {
+                            void navigate({ to: "/auth" });
+                            return;
+                          }
+                          setBlockOpen(true);
+                        }}
+                        className="cursor-pointer gap-2 text-xs font-sans text-destructive focus:text-destructive focus:bg-destructive/10"
+                      >
+                        <UserX className="size-3.5" />
+                        <span>Block @{post.author.handle}</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Post Title (If present) */}
+          {post.title && (
+            <h2 className="font-sans text-base sm:text-lg font-bold text-foreground tracking-tight mb-1.5 leading-snug">
+              <Link to="/post/$id" params={{ id: post.id }} className="hover:text-primary transition-colors">
+                {post.title}
+              </Link>
+            </h2>
+          )}
+
+          {/* Post Body */}
+          {editing ? (
+            <div className="space-y-3 my-2">
+              <Textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className="w-full min-h-[120px] rounded-xl font-sans text-sm p-3"
+              />
+              <div className="flex gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing(false)}
+                  disabled={busy}
+                  className="rounded-full h-8 text-xs font-sans"
                 >
-                  <UserX className="size-3.5" />
-                  <span>
-                    {t("block")} @{post.author.handle}
-                  </span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Editing State */}
-      {editing ? (
-        <div className="mt-4 space-y-3">
-          <Textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value.slice(0, 5000))}
-            className="min-h-40 font-reading text-base sm:text-[17px] leading-relaxed border-border/70 focus:border-primary"
-            aria-label="Edit story"
-          />
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setEditing(false);
-                setDraft(post.body);
-              }}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              size="sm"
-              disabled={busy || !draft.trim()}
-              onClick={() => void saveEdit()}
-            >
-              {busy ? "Saving…" : t("save")}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* Reading Story Content */
-        <div className="mt-2">
-          {/* Category Kicker */}
-          <div className="mb-1.5">
-            <Link
-              to="/discover"
-              search={{ q: kicker.toLowerCase() }}
-              className="text-xs font-sans tracking-widest text-primary font-medium uppercase hover:opacity-80 transition-opacity inline-block"
-            >
-              {kicker}
-            </Link>
-          </div>
-
-          {/* Title & Excerpt */}
-          {full ? (
-            <div>
-              {post.title && (
-                <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground leading-tight">
-                  {post.title}
-                </h1>
-              )}
-              <div className="font-reading text-lg sm:text-xl leading-relaxed sm:leading-9 text-foreground/90 mt-4 whitespace-pre-line">
-                {post.body}
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => void saveEdit()}
+                  disabled={busy || !draft.trim()}
+                  className="rounded-full h-8 text-xs font-sans"
+                >
+                  {busy ? "Saving…" : "Save Changes"}
+                </Button>
               </div>
             </div>
           ) : (
+            <div className="my-1.5">
+              <p
+                className={cn(
+                  "font-sans text-sm sm:text-base leading-relaxed text-foreground whitespace-pre-line break-words",
+                  isPoetry && "font-serif italic leading-loose text-foreground/95",
+                  !expanded && isLong && "line-clamp-4",
+                )}
+              >
+                {post.body}
+              </p>
+              {!full && isLong && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded(!expanded)}
+                  className="mt-1 text-xs font-semibold text-primary hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                >
+                  {expanded ? (
+                    <>
+                      Show less <ChevronUp className="size-3" />
+                    </>
+                  ) : (
+                    <>
+                      Show more <ChevronDown className="size-3" />
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Topic Tags */}
+          {Array.isArray(post.tags) && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5 mb-1">
+              {post.tags.map((tag) => (
+                <Link
+                  key={tag}
+                  to="/discover"
+                  search={{ q: tag }}
+                  className="text-xs font-sans font-medium text-primary hover:underline"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Social Engagement Actions Bar */}
+          <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-border/40 text-muted-foreground max-w-md">
+            {/* Comment Action */}
             <Link
               to="/post/$id"
               params={{ id: post.id }}
-              className="block group"
+              className="flex items-center gap-1.5 text-xs font-sans font-medium hover:text-primary transition-colors cursor-pointer group/action p-1 -m-1"
+              aria-label="View comments"
             >
-              {post.title && (
-                <h2 className="font-display text-xl sm:text-2xl font-semibold text-foreground group-hover:text-primary transition-colors leading-snug tracking-tight">
-                  {post.title}
-                </h2>
-              )}
-              <p className="font-reading text-base leading-relaxed text-foreground/90 line-clamp-3 mt-2">
-                {post.body}
-              </p>
+              <div className="size-8 rounded-full flex items-center justify-center group-hover/action:bg-primary/10 transition-colors">
+                <MessageCircle className="size-4.5" />
+              </div>
+              <span>{post.comments}</span>
             </Link>
-          )}
 
-          {/* Additional Tags (if any beyond kicker) */}
-          {post.tags && post.tags.length > 1 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {post.tags.slice(1).map((tag) => {
-                const cleanTag = tag.replace(/^#/, "");
-                return (
-                  <Link
-                    key={tag}
-                    to="/discover"
-                    search={{ q: cleanTag }}
-                    className="text-xs font-sans text-muted-foreground/80 hover:text-primary transition-colors"
-                  >
-                    #{cleanTag}
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+            {/* Like Heart Action */}
+            <button
+              type="button"
+              onClick={handleToggleLike}
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-sans font-medium transition-colors cursor-pointer group/action p-1 -m-1",
+                isLiked ? "text-rose-600 font-semibold" : "hover:text-rose-600",
+              )}
+              aria-label={isLiked ? "Unlike post" : "Like post"}
+            >
+              <div className="size-8 rounded-full flex items-center justify-center group-hover/action:bg-rose-500/10 transition-colors">
+                <Heart
+                  className={cn(
+                    "size-4.5 transition-transform active:scale-125",
+                    isLiked && "fill-rose-600 text-rose-600",
+                  )}
+                />
+              </div>
+              <span>{post.likes}</span>
+            </button>
 
-      {/* Engagement Footer */}
-      <div className="mt-5 flex items-center justify-between pt-1">
-        <div className="flex items-center gap-1 sm:gap-2">
-          {/* Literary Applause / Clap Button */}
-          <button
-            type="button"
-            onClick={handleClap}
-            className={cn(
-              "flex items-center gap-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-xs font-sans transition-all duration-150 px-2.5 py-1.5 rounded-full active:scale-95 cursor-pointer",
-              isLiked
-                ? "text-primary font-semibold bg-primary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
-            )}
-            aria-label={isLiked ? "Unlike / Remove applause" : "Applaud this story"}
-            title={isLiked ? "Applauded" : "Applaud story"}
-          >
-            <ClapIcon className="size-4.5" filled={isLiked} />
-            <span className="font-sans font-medium">{post.likes}</span>
-          </button>
+            {/* Bookmark Action */}
+            <button
+              type="button"
+              onClick={handleToggleBookmark}
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-sans font-medium transition-colors cursor-pointer group/action p-1 -m-1",
+                bookmarked ? "text-primary font-semibold" : "hover:text-primary",
+              )}
+              aria-label={bookmarked ? "Remove bookmark" : "Bookmark post"}
+            >
+              <div className="size-8 rounded-full flex items-center justify-center group-hover/action:bg-primary/10 transition-colors">
+                <Bookmark className={cn("size-4.5", bookmarked && "fill-primary text-primary")} />
+              </div>
+            </button>
 
-          {/* Comment / Response Count Button */}
-          <Link
-            to="/post/$id"
-            params={{ id: post.id }}
-            className="flex items-center gap-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-xs font-sans text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors px-2.5 py-1.5 rounded-full cursor-pointer"
-            aria-label={`${post.comments} responses`}
-            title="View responses"
-          >
-            <MessageCircle className="size-4" />
-            <span className="font-sans font-medium">{post.comments}</span>
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {/* Bookmark Toggle */}
-          <button
-            type="button"
-            onClick={handleBookmark}
-            className={cn(
-              "flex items-center justify-center size-9 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8 rounded-full transition-colors cursor-pointer",
-              bookmarked
-                ? "text-primary hover:bg-primary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
-            )}
-            aria-label={bookmarked ? "Remove from reading list" : "Save to reading list"}
-            title={bookmarked ? "Saved in reading list" : "Save to reading list"}
-          >
-            <Bookmark className={cn("size-4", bookmarked && "fill-current text-primary")} />
-          </button>
-
-          {/* Share Link Button */}
-          <button
-            type="button"
-            onClick={handleShare}
-            className="flex items-center justify-center size-9 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
-            aria-label="Share story"
-            title="Copy story link"
-          >
-            <Share2 className="size-4" />
-          </button>
+            {/* Share Action */}
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex items-center gap-1.5 text-xs font-sans font-medium hover:text-primary transition-colors cursor-pointer group/action p-1 -m-1"
+              aria-label="Share post"
+            >
+              <div className="size-8 rounded-full flex items-center justify-center group-hover/action:bg-primary/10 transition-colors">
+                <Share2 className="size-4.5" />
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Report Modal */}
+      {/* Modals */}
       <ReportModal
-        postId={post.id}
-        postTitle={post.title}
-        authorHandle={post.author.handle}
         open={reportOpen}
         onOpenChange={setReportOpen}
+        targetType="post"
+        targetId={post.id}
       />
-
-      {/* Block Modal */}
       <BlockModal
-        targetId={post.author.id}
-        targetHandle={post.author.handle}
-        targetName={post.author.name}
         open={blockOpen}
         onOpenChange={setBlockOpen}
+        targetUser={{
+          id: post.author.id,
+          handle: post.author.handle,
+          name: post.author.name,
+        }}
       />
     </article>
   );
