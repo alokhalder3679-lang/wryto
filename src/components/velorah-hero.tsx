@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   X,
@@ -16,68 +16,73 @@ import {
 } from "lucide-react";
 import { useInkline } from "@/lib/inkline-context";
 import { useSettings } from "@/lib/user-settings";
-import { WrytoLogo } from "@/components/wryto-logo";
+import { JourneyModal } from "@/components/journey-modal";
 
-export function WrytoBrandLogo({ className = "h-12 w-auto" }: { className?: string }) {
+const VIDEO_URL =
+  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260324_151826_c7218672-6e92-402c-9e45-f1e0f454bdc4.mp4";
+
+export function WrytoCinematicLogo({ className = "h-11 sm:h-12 w-auto" }: { className?: string }) {
   return (
     <svg
-      width={220}
-      height={160}
-      viewBox="30 25 220 160"
+      viewBox="0 0 210 115"
+      width="146"
+      height="80"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      style={{ aspectRatio: "220/160" }}
-      aria-label="Wryto Logo"
+      className={`block shrink-0 select-none ${className}`}
+      role="img"
+      aria-label="Wryto"
     >
-      <g>
-        <path
-          d="M 32 138 C 80 137.7, 180 137.7, 245 138"
-          stroke="#E76F64"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path d="M 112 127 C 110 120 114 113 118 108 C 117 114 117 121 114 127 Z" fill="#68C3B4" />
-        <path d="M 126 126 C 132 127 137 122 140 117 C 134 119 129 122 126 126 Z" fill="#68C3B4" />
-        <path
-          d="M 114 125 C 113 112, 120 95, 128 82 C 137 68, 150 54, 172 38 C 174 46, 170 60, 160 74 C 152 85, 144 98, 140 108 C 136 116, 131 123, 126 126 Z"
-          fill="#E76F64"
-        />
-        <path
-          d="M 98 152 L 122 118 L 170 42"
-          stroke="#68C3B4"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-        />
-        <path d="M 98 152 L 95 157" stroke="#2C3D52" strokeWidth="2.8" strokeLinecap="round" />
-        <path d="M 132 80 L 144 87" stroke="#263445" strokeWidth="1.2" strokeLinecap="round" />
-        <path d="M 140 68 L 154 77" stroke="#263445" strokeWidth="1.2" strokeLinecap="round" />
-        <path d="M 148 56 L 163 65" stroke="#263445" strokeWidth="1.2" strokeLinecap="round" />
-        <path d="M 132 94 L 123 99" stroke="#263445" strokeWidth="1.2" strokeLinecap="round" />
-        <path d="M 137 106 L 128 112" stroke="#263445" strokeWidth="1.2" strokeLinecap="round" />
-        <path
-          d="M 98 163 C 98 163 103 170 103 174 C 103 177.3 100.3 180 97 180 C 93.7 180 91 177.3 91 174 C 91 170 96 163 98 163 Z"
-          fill="#E76F64"
-        />
-        <path
-          d="M 60 143 L 71 168 L 82 147 L 94 169 L 103 146"
-          stroke="#E76F64"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <text
-          x="108"
-          y="168"
-          fill="#93A7BE"
-          fontSize="36"
-          fontWeight="400"
-          letterSpacing="1px"
-          style={{ fontFamily: "'Inter', sans-serif" }}
-        >
-          ryto
-        </text>
-      </g>
+      {/* Left Mint Base Vane */}
+      <path d="M 80 57 C 79 49, 83 42, 87 37 C 86 44, 85 51, 82 57 Z" fill="#68C3B4" />
+      {/* Right Mint Base Vane */}
+      <path d="M 91 58 C 98 59, 104 56, 108 52 C 101 53, 95 55, 91 58 Z" fill="#68C3B4" />
+
+      {/* Main Coral Feather Plume */}
+      <path
+        d="M 84 53 C 84 42, 90 31, 98 22 C 108 11, 121 4, 138 1 C 140 9, 137 19, 129 30 C 122 39, 113 47, 104 52 C 98 55, 92 56, 84 53 Z"
+        fill="#E76F64"
+      />
+
+      {/* Feather Inner Slits / Shadow Cutouts */}
+      <path d="M 91 33 L 90 46" stroke="#081C30" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 97 24 L 96 41" stroke="#081C30" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 105 16 L 103 34" stroke="#081C30" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M 129 22 L 114 27" stroke="#081C30" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 122 33 L 106 38" stroke="#081C30" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 114 43 L 98 47" stroke="#081C30" strokeWidth="1.8" strokeLinecap="round" />
+
+      {/* Quill Spine */}
+      <path d="M 67 79 L 92 47 L 135 5" stroke="#68C3B4" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M 92 47 L 136 3" stroke="#081C30" strokeWidth="1.5" strokeLinecap="round" />
+
+      {/* Horizontal Baseline */}
+      <path d="M 6 66.5 Q 105 65.8 204 66.8" stroke="#E76F64" strokeWidth="2" strokeLinecap="round" />
+
+      {/* Wordmark: Stylized "W" + "ryto" */}
+      <path
+        d="M 28 71 L 39 97 L 51 74 L 64 96 L 77 72"
+        stroke="#E76F64"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M 67 98 L 78 79" stroke="#E76F64" strokeWidth="2.5" strokeLinecap="round" />
+      <path
+        d="M 71 89 C 71 89, 75 94, 75 97.5 C 75 100.2, 72.8 102.4, 70.1 102.4 C 67.4 102.4, 65.2 100.2, 65.2 97.5 C 65.2 94, 69.5 89, 71 89 Z"
+        fill="#E76F64"
+      />
+      <text
+        x="83"
+        y="97"
+        fill="#B0C4DA"
+        fontSize="33"
+        fontWeight="500"
+        letterSpacing="0.04em"
+        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+      >
+        ryto
+      </text>
     </svg>
   );
 }
@@ -152,6 +157,9 @@ export default function CustomHero() {
   const { user } = useInkline();
   const { settings, update } = useSettings();
   const [selectedExcerpt, setSelectedExcerpt] = useState<LiteraryExcerpt | null>(null);
+  const [modalMode, setModalMode] = useState<"signup" | "reading" | null>(null);
+  const [videoReady, setVideoReady] = useState<boolean>(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const isDark =
     settings.theme === "dark" ||
@@ -163,6 +171,56 @@ export default function CustomHero() {
     void update({ theme: isDark ? "light" : "dark" });
   };
 
+  // Video Autoplay and Resilient Playback Handling
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.defaultMuted = true;
+    video.muted = true;
+    video.playsInline = true;
+
+    const attemptPlay = () => {
+      if (!video) return;
+      video.muted = true;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setVideoReady(true);
+          })
+          .catch(() => {
+            // Autoplay will resume upon first user interaction
+          });
+      }
+    };
+
+    attemptPlay();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && video.paused) {
+        attemptPlay();
+      }
+    };
+
+    const handleFirstInteraction = () => {
+      if (video.paused) {
+        attemptPlay();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pointerdown", handleFirstInteraction, { passive: true });
+    window.addEventListener("keydown", handleFirstInteraction, { passive: true });
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pointerdown", handleFirstInteraction);
+      window.removeEventListener("keydown", handleFirstInteraction);
+    };
+  }, []);
+
+  // Keyboard accessibility for excerpt dialog
   useEffect(() => {
     if (!selectedExcerpt) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -178,124 +236,191 @@ export default function CustomHero() {
   }, [selectedExcerpt]);
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground transition-colors duration-200 flex flex-col justify-between selection:bg-primary/20 selection:text-primary">
-      {/* Editorial Navigation Header */}
-      <header className="w-full border-b border-border/60 bg-background/80 backdrop-blur-md sticky top-0 z-30 transition-colors">
-        <nav
-          aria-label="Main Navigation"
-          className="max-w-7xl mx-auto px-4 sm:px-8 py-3.5 sm:py-4 flex items-center justify-between"
+    <div className="relative min-h-screen w-full bg-background text-foreground transition-colors duration-200 flex flex-col justify-between selection:bg-primary/20 selection:text-primary">
+      {/* ── TOP HERO REGION: Video Canvas & Glassmorphic Masthead ─────────── */}
+      <section className="relative min-h-screen w-full flex flex-col justify-between overflow-hidden">
+        {/* Fullscreen Looping Cinematic Video */}
+        <video
+          ref={videoRef}
+          src={VIDEO_URL}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          onLoadedData={() => setVideoReady(true)}
+          onCanPlay={() => setVideoReady(true)}
+          onPlaying={() => setVideoReady(true)}
+          className={`absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-1000 ${
+            videoReady ? "opacity-100" : "opacity-80"
+          }`}
         >
-          {/* Masthead Brand Logo */}
-          <Link
-            to="/"
-            className="inline-flex items-center min-h-[44px] min-w-[44px] focus:outline-none transition-opacity hover:opacity-90"
-            aria-label="Wryto Home"
+          <source src={VIDEO_URL} type="video/mp4" />
+        </video>
+
+        {/* Ambient Contrast Scrim: Delivers WCAG AA legibility across video frames and seamlessly blends into page background */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-[1] pointer-events-none bg-gradient-to-b from-black/55 via-black/25 via-60% to-background"
+        />
+
+        {/* Floating Glassmorphic Navigation Header */}
+        <header className="relative z-20 w-full">
+          <nav
+            aria-label="Main Navigation"
+            className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between"
           >
-            <WrytoLogo variant="editorial" size="sm" subtitle="Volume I" />
-          </Link>
-
-          {/* Right Navigation Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Quick Theme Toggle */}
-            <button
-              type="button"
-              onClick={handleToggleTheme}
-              className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            {/* Masthead Brand Lockup */}
+            <Link
+              to="/"
+              className="inline-flex items-center gap-3 min-h-[44px] min-w-[44px] focus:outline-none transition-opacity hover:opacity-90 rounded-lg group"
+              aria-label="Wryto Home"
             >
-              {isDark ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
-            </button>
+              <WrytoCinematicLogo className="h-10 sm:h-12 w-auto drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]" />
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="font-serif text-white font-normal text-lg tracking-tight leading-none drop-shadow-md">
+                  Wryto
+                </span>
+                <span className="text-[10px] tracking-widest uppercase font-sans text-white/70 font-medium">
+                  Volume I
+                </span>
+              </div>
+            </Link>
 
-            {user ? (
-              <Link
-                to="/feed"
-                className="inline-flex items-center justify-center min-h-[44px] px-5 py-2 rounded-full bg-primary text-primary-foreground text-sm font-sans font-medium shadow-xs hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            {/* Navigation Actions */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Theme Toggle */}
+              <button
+                type="button"
+                onClick={handleToggleTheme}
+                className="liquid-glass-button inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full text-white/90 hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
               >
-                Go to Feed
-              </Link>
-            ) : (
-              <>
+                {isDark ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
+              </button>
+
+              {user ? (
                 <Link
                   to="/feed"
-                  className="hidden md:inline-flex items-center justify-center min-h-[44px] px-3.5 py-2 text-sm font-sans font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="liquid-glass-button inline-flex items-center justify-center min-h-[44px] px-5 py-2.5 rounded-full text-white font-sans font-medium text-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 >
-                  Explore
+                  Go to Feed
                 </Link>
-                <Link
-                  to="/auth"
-                  className="inline-flex items-center justify-center min-h-[44px] px-3.5 py-2 text-sm font-sans font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/auth"
-                  className="inline-flex items-center justify-center min-h-[44px] px-5 py-2 rounded-full bg-primary text-primary-foreground text-sm font-sans font-medium shadow-xs hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-                >
-                  Start Writing
-                </Link>
-              </>
-            )}
-          </div>
-        </nav>
-      </header>
+              ) : (
+                <>
+                  <a
+                    href="#excerpts"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById("excerpts")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="hidden sm:inline-flex items-center justify-center min-h-[44px] px-3.5 py-2 text-sm font-sans font-medium text-white/80 hover:text-white transition-colors cursor-pointer drop-shadow-xs"
+                  >
+                    Explore
+                  </a>
+                  <Link
+                    to="/auth"
+                    className="inline-flex items-center justify-center min-h-[44px] px-3.5 py-2 text-sm font-sans font-medium text-white/85 hover:text-white transition-colors drop-shadow-xs"
+                  >
+                    Sign In
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setModalMode("signup")}
+                    className="liquid-glass-button inline-flex items-center justify-center min-h-[44px] px-5 sm:px-6 py-2.5 rounded-full text-white font-sans font-medium text-sm hover:scale-[1.03] active:scale-[0.98] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 shadow-lg"
+                  >
+                    Start Writing
+                  </button>
+                </>
+              )}
+            </div>
+          </nav>
+        </header>
 
-      {/* Flagship Editorial Hero */}
-      <main className="flex-1 flex flex-col">
-        {/* Cover Hero Section */}
-        <section className="relative px-4 sm:px-8 pt-12 sm:pt-20 pb-16 sm:pb-24 max-w-5xl mx-auto text-center flex flex-col items-center">
-          {/* Issue Banner */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/8 dark:bg-primary/15 dark:border-primary/30 px-4 py-1.5 text-xs sm:text-sm font-sans font-medium text-primary tracking-wide mb-6 sm:mb-8 transition-colors">
-            <Sparkles className="size-3.5 text-primary shrink-0" />
+        {/* Vertically Centered Cinematic Hero Content */}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-8 py-10 sm:py-16 max-w-5xl mx-auto">
+          {/* Issue Badge Pill */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs sm:text-sm font-sans font-medium text-white/90 tracking-wide mb-6 sm:mb-8 shadow-sm transition-all">
+            <Sparkles className="size-3.5 text-white/90 shrink-0" />
             <span className="text-balance">
               Volume I • The Autumn Edition • A Sanctuary for Thoughtful Writing
             </span>
           </div>
 
-          {/* Grand Literary Headline */}
-          <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-serif font-normal tracking-tight text-foreground text-balance max-w-4xl mx-auto leading-[1.08] animate-fade-rise">
-            Where thoughtful words find their quiet home.
+          {/* Grand Literary Headline in Instrument Serif */}
+          <h1
+            className="text-5xl sm:text-7xl md:text-8xl lg:text-[5.75rem] leading-[1.03] tracking-[-2px] sm:tracking-[-2.5px] max-w-5xl font-normal text-white animate-fade-rise [text-wrap:balance] drop-shadow-[0_4px_28px_rgba(0,0,0,0.55)]"
+            style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+          >
+            A quiet place for{" "}
+            <em className="italic text-white/80">words that matter.</em>
           </h1>
 
           {/* Subtitle */}
-          <p className="font-reading text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mt-5 sm:mt-6 text-balance animate-fade-rise-delay">
+          <p className="font-reading text-lg sm:text-xl text-white/85 max-w-2xl mx-auto leading-relaxed mt-5 sm:mt-7 text-balance animate-fade-rise-delay drop-shadow-[0_2px_14px_rgba(0,0,0,0.45)]">
             A distraction-free publishing haven. No algorithmic outrage. No video noise. Just essays,
             stories, and ideas that linger.
           </p>
 
-          {/* Primary Call-to-Actions */}
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 w-full max-w-md sm:max-w-none animate-fade-rise-delay-2">
-            {/* Start Writing -> /auth */}
+          {/* Primary Action Buttons */}
+          <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 w-full max-w-md sm:max-w-none animate-fade-rise-delay-2">
+            {/* 1. Begin Reading -> opens interactive reading sanctuary */}
+            <button
+              type="button"
+              onClick={() => setModalMode("reading")}
+              className="w-full sm:w-auto liquid-glass-button rounded-full px-8 sm:px-10 py-3.5 sm:py-4 text-base text-white font-medium hover:scale-[1.03] active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 shadow-lg min-h-[48px]"
+            >
+              <BookOpen className="size-4.5 text-white/90" />
+              <span>Begin Reading</span>
+            </button>
+
+            {/* 2. Start Writing -> direct signup / compose */}
             <Link
               to="/auth"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[48px] px-8 py-3.5 rounded-full bg-primary text-primary-foreground font-sans font-medium text-base shadow-sm hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[48px] px-8 sm:px-9 py-3.5 sm:py-4 rounded-full bg-primary text-primary-foreground font-sans font-medium text-base shadow-lg hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Feather className="size-4.5" />
               <span>Start Writing</span>
               <ArrowRight className="size-4" />
             </Link>
 
-            {/* Explore Stories -> /feed */}
-            <Link
-              to="/feed"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[48px] px-8 py-3.5 rounded-full border border-border bg-card text-foreground font-sans font-medium text-base shadow-xs hover:bg-muted hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            {/* 3. Explore Stories -> scroll to folio */}
+            <a
+              href="#excerpts"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("excerpts")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="w-full sm:w-auto liquid-glass-button rounded-full px-7 sm:px-8 py-3.5 sm:py-4 text-base text-white/90 font-medium hover:scale-[1.02] active:scale-[0.98] cursor-pointer inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 min-h-[48px]"
             >
-              <BookOpen className="size-4.5 text-muted-foreground" />
+              <Compass className="size-4.5 text-white/80" />
               <span>Explore Stories</span>
-            </Link>
+            </a>
           </div>
 
-          {/* Subtle editorial kicker ornament */}
-          <div className="mt-12 sm:mt-16 flex items-center justify-center gap-3 text-muted-foreground/60 text-xs tracking-widest uppercase font-sans">
-            <span className="h-px w-12 bg-border" />
+          {/* Folio Indicator Anchor */}
+          <a
+            href="#excerpts"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("excerpts")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="mt-12 sm:mt-16 inline-flex items-center justify-center gap-3 text-white/70 hover:text-white text-xs tracking-widest uppercase font-sans transition-colors cursor-pointer group"
+          >
+            <span className="h-px w-10 bg-white/30 group-hover:w-14 transition-all" />
             <span>Curated Folio</span>
-            <span className="h-px w-12 bg-border" />
-          </div>
-        </section>
+            <span className="h-px w-10 bg-white/30 group-hover:w-14 transition-all" />
+          </a>
+        </div>
+      </section>
 
+      {/* ── LOWER PAGE REGIONS: Curated Excerpts, Pillars & Sanctuary ─────── */}
+      <main className="flex-1 flex flex-col">
         {/* Curated Literary Excerpts Showcase */}
         <section
+          id="excerpts"
           aria-labelledby="featured-excerpts-heading"
-          className="w-full border-t border-border/60 bg-muted/20 py-16 sm:py-24 px-4 sm:px-8 transition-colors"
+          className="w-full bg-background py-16 sm:py-24 px-4 sm:px-8 transition-colors scroll-mt-6"
         >
           <div className="max-w-7xl mx-auto">
             <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
@@ -375,6 +500,7 @@ export default function CustomHero() {
                       className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-xl border border-border bg-muted/40 group-hover:bg-primary group-hover:border-primary group-hover:text-primary-foreground text-foreground text-xs sm:text-sm font-sans font-medium transition-all duration-200 cursor-pointer"
                       aria-label={`Read excerpt of ${excerpt.title} by ${excerpt.author}`}
                     >
+                      <BookOpen className="size-3.5" />
                       <span>Read Excerpt</span>
                       <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                     </button>
@@ -388,7 +514,7 @@ export default function CustomHero() {
         {/* Value Pillars Section */}
         <section
           aria-labelledby="pillars-heading"
-          className="w-full py-16 sm:py-24 px-4 sm:px-8 border-t border-border/60 transition-colors"
+          className="w-full py-16 sm:py-24 px-4 sm:px-8 border-t border-border/60 transition-colors bg-muted/20"
         >
           <div className="max-w-7xl mx-auto">
             <div className="text-center max-w-2xl mx-auto mb-14 sm:mb-16">
@@ -465,7 +591,7 @@ export default function CustomHero() {
         </section>
 
         {/* Closing Sanctuary Call to Action */}
-        <section className="w-full px-4 sm:px-8 pb-20 sm:pb-28">
+        <section className="w-full px-4 sm:px-8 py-20 sm:py-28">
           <div className="max-w-4xl mx-auto rounded-3xl border border-border bg-card p-8 sm:p-14 text-center shadow-xs">
             <div className="inline-flex items-center justify-center size-12 rounded-full bg-primary/10 text-primary mb-5">
               <Feather className="size-6" />
@@ -478,13 +604,14 @@ export default function CustomHero() {
               among authors who value substance.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                to="/auth"
+              <button
+                type="button"
+                onClick={() => setModalMode("signup")}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[48px] px-8 py-3.5 rounded-full bg-primary text-primary-foreground font-sans font-medium text-base shadow-sm hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
                 <span>Start Writing on Wryto</span>
                 <ArrowRight className="size-4" />
-              </Link>
+              </button>
               <Link
                 to="/feed"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[48px] px-8 py-3.5 rounded-full border border-border bg-background text-foreground font-sans font-medium text-base hover:bg-muted hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
@@ -501,7 +628,7 @@ export default function CustomHero() {
       <footer className="w-full border-t border-border/60 bg-background py-10 px-4 sm:px-8 transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
-            <WrytoLogo variant="editorial" size="xs" subtitle="Sanctuary" />
+            <WrytoCinematicLogo className="h-8 w-auto" />
             <span className="hidden sm:inline text-muted-foreground/40">•</span>
             <span className="font-sans text-xs text-muted-foreground">
               Volume I · The Autumn Edition · Written for thinkers & creators.
@@ -527,15 +654,24 @@ export default function CustomHero() {
             >
               Sign In
             </Link>
-            <Link
-              to="/auth"
-              className="min-h-[44px] inline-flex items-center font-medium text-primary hover:underline transition-colors"
+            <button
+              type="button"
+              onClick={() => setModalMode("signup")}
+              className="min-h-[44px] inline-flex items-center font-medium text-primary hover:underline transition-colors cursor-pointer"
             >
               Start Writing
-            </Link>
+            </button>
           </div>
         </div>
       </footer>
+
+      {/* Interactive Curated Reading Sanctuary Modal from velorah-hero */}
+      <JourneyModal
+        isOpen={modalMode !== null}
+        mode={modalMode ?? "reading"}
+        onClose={() => setModalMode(null)}
+        onSwitchMode={(mode) => setModalMode(mode)}
+      />
 
       {/* Interactive Curated Excerpt Preview Modal */}
       {selectedExcerpt && (
@@ -598,7 +734,14 @@ export default function CustomHero() {
             {/* Excerpt Body Paragraphs */}
             <div className="space-y-4 font-reading text-base sm:text-lg text-foreground/90 leading-relaxed">
               {selectedExcerpt.paragraphs.map((p, idx) => (
-                <p key={idx} className={selectedExcerpt.category === "Poetry" ? "whitespace-pre-line leading-loose italic" : ""}>
+                <p
+                  key={idx}
+                  className={
+                    selectedExcerpt.category === "Poetry"
+                      ? "whitespace-pre-line leading-loose italic"
+                      : ""
+                  }
+                >
                   {p}
                 </p>
               ))}
@@ -613,14 +756,17 @@ export default function CustomHero() {
               >
                 Close Preview
               </button>
-              <Link
-                to="/auth"
-                onClick={() => setSelectedExcerpt(null)}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedExcerpt(null);
+                  setModalMode("signup");
+                }}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[44px] px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-sans text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
               >
                 <span>Join Wryto & Start Writing</span>
                 <ArrowRight className="size-4" />
-              </Link>
+              </button>
             </div>
           </div>
         </div>
