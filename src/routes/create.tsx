@@ -28,6 +28,16 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/create")({
   staticData: { sitemap: false },
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tag?: string; format?: "thought" | "story" | "poetry"; prompt?: string } => ({
+    tag: typeof search["tag"] === "string" ? search["tag"] : undefined,
+    format:
+      search["format"] === "thought" || search["format"] === "story" || search["format"] === "poetry"
+        ? search["format"]
+        : undefined,
+    prompt: typeof search["prompt"] === "string" ? search["prompt"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Create Post — Wryto" },
@@ -124,6 +134,8 @@ function renderInline(text: string): React.ReactNode {
 
 function CreatePage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const [promptDismissed, setPromptDismissed] = useState(false);
   const { publishPost, user, profile, loading: authLoading } = useInkline();
   const [postMode, setPostMode] = useState<"thought" | "story" | "poetry">("thought");
   const [title, setTitle] = useState("");

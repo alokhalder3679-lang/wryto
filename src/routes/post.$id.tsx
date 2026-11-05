@@ -49,18 +49,20 @@ export const Route = createFileRoute("/post/$id")({
       const { data } = await supabase
         .from("posts")
         .select(
-          "title, body, created_at, updated_at, author:profiles!posts_author_id_fkey(handle, display_name)",
+          "title, body, content, created_at, updated_at, author:profiles!posts_author_id_fkey(handle, display_name)",
         )
         .eq("id", params.id)
         .maybeSingle();
       return {
-        meta: data as null | {
-          title: string | null;
-          body: string;
-          created_at: string;
-          updated_at: string;
-          author: { handle: string; display_name: string } | null;
-        },
+        meta: data
+          ? {
+              title: data.title ?? null,
+              body: (data.body || data.content || "") as string,
+              created_at: data.created_at,
+              updated_at: data.updated_at,
+              author: data.author as { handle: string; display_name: string } | null,
+            }
+          : null,
       };
     } catch {
       return { meta: null };
@@ -70,10 +72,11 @@ export const Route = createFileRoute("/post/$id")({
     const m = loaderData?.meta;
     const url = `https://wryto-nine.vercel.app/post/${params.id}`;
     const author = m?.author?.display_name;
-    const excerpt = m
-      ? m.body.replace(/\s+/g, " ").trim().slice(0, 155)
+    const rawText = typeof m?.body === "string" ? m.body : "";
+    const excerpt = rawText
+      ? rawText.replace(/\s+/g, " ").trim().slice(0, 155)
       : "Read thoughtful posts on Wryto.";
-    const headline = m ? m.title || excerpt.slice(0, 60) : "Post";
+    const headline = m ? m.title || (excerpt.length > 5 ? excerpt.slice(0, 60) : "Post") : "Post";
     const title = m ? `${headline}${author ? ` by ${author}` : ""} — Wryto` : "Post — Wryto";
     return {
       meta: [

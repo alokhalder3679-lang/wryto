@@ -85,10 +85,10 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
       const { data } = await supabase
         .from("user_settings")
         .select("*")
-        .eq("user_id", user.id)
+        .or(`id.eq.${user.id},user_id.eq.${user.id}`)
         .maybeSingle();
       if (!data) {
-        await supabase.from("user_settings").insert({ user_id: user.id });
+        await supabase.from("user_settings").insert({ id: user.id, user_id: user.id });
         return;
       }
       const { user_id: _u, updated_at: _t, ...rest } = data;
@@ -106,7 +106,7 @@ export function UserSettingsProvider({ children }: { children: ReactNode }) {
       applySettings(next);
       localStorage.setItem(LOCAL, JSON.stringify(next));
       if (!user) return true;
-      const { error } = await supabase.from("user_settings").upsert({ user_id: user.id, ...next });
+      const { error } = await supabase.from("user_settings").upsert({ id: user.id, user_id: user.id, ...next });
       return !error;
     },
     [settings, user],

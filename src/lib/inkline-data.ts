@@ -50,11 +50,40 @@ export function initialsOf(name: string) {
 }
 
 export function toWriter(row: ProfileRow | any): Writer {
-  const name = (row.display_name || row.username || "Writer").trim() || "Writer";
-  const handle = (row.handle || row.username || "writer").trim() || "writer";
-  const rawAvatar = (row.avatar_url || row.profile_image || "").trim();
+  if (!row) {
+    return {
+      id: "writer",
+      name: "Writer",
+      handle: "writer",
+      initials: "WR",
+      bio: null,
+      location: null,
+      avatarUrl: null,
+    };
+  }
+  const name =
+    (typeof row.display_name === "string"
+      ? row.display_name
+      : typeof row.username === "string"
+        ? row.username
+        : "Writer"
+    ).trim() || "Writer";
+  const handle =
+    (typeof row.handle === "string"
+      ? row.handle
+      : typeof row.username === "string"
+        ? row.username
+        : "writer"
+    ).trim() || "writer";
+  const rawAvatar = (
+    typeof row.avatar_url === "string"
+      ? row.avatar_url
+      : typeof row.profile_image === "string"
+        ? row.profile_image
+        : ""
+  ).trim();
   return {
-    id: row.id,
+    id: String(row.id || "writer"),
     name,
     handle,
     initials: initialsOf(name),
@@ -92,6 +121,7 @@ type PostRow = {
 };
 
 export function toPost(row: PostRow | any): Post | null {
+  if (!row) return null;
   const author = row.author
     ? toWriter(row.author)
     : {
