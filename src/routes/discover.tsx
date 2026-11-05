@@ -52,12 +52,12 @@ function DiscoverErrorComponent() {
 }
 
 const TRENDING_EXPLORE = [
-  { tag: "essays", label: "Writing & Craft", count: "1.4k posts" },
-  { tag: "poetry", label: "Poetry & Verse", count: "980 posts" },
-  { tag: "philosophy", label: "Deep Thoughts", count: "720 posts" },
-  { tag: "creative", label: "Creative Work", count: "650 posts" },
-  { tag: "reflections", label: "Life & Lessons", count: "540 posts" },
-  { tag: "technology", label: "Future & AI", count: "430 posts" },
+  { tag: "essays", label: "Essays & Memoir", count: "1.4k essays" },
+  { tag: "poetry", label: "Poetic Works", count: "980 pieces" },
+  { tag: "philosophy", label: "Philosophy & Mind", count: "720 writings" },
+  { tag: "creative", label: "The Solitude of Ink", count: "650 notes" },
+  { tag: "reflections", label: "Quiet Letters", count: "540 stories" },
+  { tag: "craft", label: "The Writer's Desk", count: "430 pieces" },
 ];
 
 function DiscoverPage() {
@@ -183,27 +183,34 @@ function DiscoverPage() {
       {/* ── Content View ───────────────────────────────────────── */}
       {!query ? (
         <div className="divide-y divide-border/60">
-          {/* Trending Topics Widget */}
+          {/* Curated Themes */}
           <div className="p-4 sm:p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="size-4 text-primary" />
-              <h2 className="font-sans text-sm font-bold text-foreground">Trending Now</h2>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Compass className="size-4 text-primary" />
+                <h2 className="font-sans text-sm font-semibold text-foreground">Curated Themes</h2>
+              </div>
+              <span className="text-[11px] text-muted-foreground font-sans">Volume I · Autumn</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {TRENDING_EXPLORE.map((item) => (
                 <button
                   key={item.tag}
                   type="button"
                   onClick={() => setQuery(item.tag)}
-                  className="p-3 rounded-xl border border-border/60 bg-card hover:bg-muted/40 transition-colors text-left cursor-pointer group"
+                  className="p-3 rounded-2xl border border-border/80 bg-card hover:bg-muted/50 transition-colors text-left cursor-pointer group flex flex-col justify-between"
                 >
-                  <p className="text-[10px] font-sans text-muted-foreground uppercase font-medium">
-                    {item.label}
+                  <div>
+                    <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                      {item.label}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                      #{item.tag}
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/60 mt-2 font-mono tabular-numbers">
+                    {item.count}
                   </p>
-                  <p className="font-sans text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                    #{item.tag}
-                  </p>
-                  <p className="text-[11px] font-sans text-muted-foreground">{item.count}</p>
                 </button>
               ))}
             </div>
