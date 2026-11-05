@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FollowButton } from "@/components/post-card";
 import { LanguageToggle } from "@/components/language-toggle";
+import { DailyPromptCard } from "@/components/daily-prompt-card";
 import { useInkline } from "@/lib/inkline-context";
 import { getAvatarUrl } from "@/lib/avatar";
 import { initialsOf } from "@/lib/inkline-data";
@@ -59,6 +60,9 @@ export function RightRail({ className }: { className?: string }) {
           )}
         </div>
       </form>
+
+      {/* Daily Writing Prompt Widget */}
+      <DailyPromptCard />
 
       {/* Trending Topics Widget (Liquid Card) */}
       <div className="rounded-3xl border border-border/80 bg-card/80 backdrop-blur-md p-4.5 shadow-xs">

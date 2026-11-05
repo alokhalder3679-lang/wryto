@@ -4,6 +4,7 @@ import { BookOpen, Sparkles, UserPlus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PostCard } from "@/components/post-card";
 import { InlineComposer } from "@/components/inline-composer";
+import { DailyPromptCard } from "@/components/daily-prompt-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInkline } from "@/lib/inkline-context";
@@ -197,6 +198,11 @@ function FeedPage() {
             Following
           </button>
         </div>
+      </div>
+
+      {/* Mobile Daily Prompt Card (Desktop displays in Right Rail) */}
+      <div className="xl:hidden p-3 border-b border-border/50">
+        <DailyPromptCard compact />
       </div>
 
       {/* ── Inline Quick Composer (Top of Feed) ───────────────── */}

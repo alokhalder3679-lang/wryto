@@ -10,6 +10,8 @@ import {
   Send,
   Share2,
   Trash2,
+  Type,
+  Quote,
   UserX,
 } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -118,6 +120,7 @@ function PostDetailPage() {
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
+  const [readingFont, setReadingFont] = useState<"serif" | "sans">("serif");
 
   const load = useCallback(async () => {
     try {
@@ -385,6 +388,24 @@ function PostDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+        </div>
+
+        {/* Typography Switcher Pill for Reading Sanctuary */}
+        <div className="flex items-center justify-between pb-1">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground font-sans">
+            <span className="font-medium text-foreground">{post.readTime || "2 min read"}</span>
+            <span>·</span>
+            <span className="text-[11px] capitalize">{isPoetry ? "Poetry" : "Essay"}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReadingFont((f) => (f === "serif" ? "sans" : "serif"))}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-border/70 hover:bg-muted text-muted-foreground hover:text-foreground transition-all spring-press cursor-pointer"
+            title="Switch typography font"
+          >
+            <Type className="size-3" />
+            <span className="text-[11px] font-sans">{readingFont === "serif" ? "Serif" : "Sans"}</span>
+          </button>
         </div>
 
         {/* Post Title (If present) */}

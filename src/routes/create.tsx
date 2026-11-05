@@ -19,6 +19,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { AmbientSoundToggle } from "@/components/ambient-sound-toggle";
 import { getAvatarUrl } from "@/lib/avatar";
 import { initialsOf } from "@/lib/inkline-data";
 import { useInkline } from "@/lib/inkline-context";
@@ -135,6 +136,16 @@ function CreatePage() {
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const draftKey = user ? `wryto_draft_${user.id}` : "wryto_draft_guest";
+
+  // Seed prompt from URL if provided
+  useEffect(() => {
+    if (search.tag) {
+      setTags((prev) => (prev.includes(search.tag!) ? prev : [search.tag!, ...prev]));
+    }
+    if (search.format) {
+      setPostMode(search.format);
+    }
+  }, [search.tag, search.format]);
 
   // Restore draft on mount
   useEffect(() => {
@@ -278,6 +289,8 @@ function CreatePage() {
             </span>
           )}
 
+          <AmbientSoundToggle />
+
           {/* Toggle Edit vs Preview */}
           <div className="inline-flex rounded-full border border-border/70 p-0.5 bg-muted/40">
             <button
@@ -325,6 +338,30 @@ function CreatePage() {
 
       {/* ── Main Composer Container ──────────────────────────── */}
       <div className="p-4 sm:p-6 space-y-5">
+        {search.prompt && !promptDismissed && (
+          <div className="relative overflow-hidden rounded-2xl border border-primary/30 liquid-glass p-3.5 sm:p-4 text-xs animate-fade-rise">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="font-semibold text-primary uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Sparkles className="size-3.5" /> Prompt Inspiration
+              </span>
+              <button
+                type="button"
+                onClick={() => setPromptDismissed(true)}
+                className="text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
+                aria-label="Dismiss prompt note"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+            <p className="font-serif italic text-sm text-foreground my-1 pl-2.5 border-l-2 border-primary/50">
+              "{search.prompt}"
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Reflect freely on this prompt. Your post will automatically be tagged #{search.tag || "reflections"}.
+            </p>
+          </div>
+        )}
+
         {/* Post Format Selector */}
         <div className="flex items-center gap-2 border-b border-border/50 pb-3">
           <span className="text-xs font-sans font-medium text-muted-foreground mr-1">Format:</span>

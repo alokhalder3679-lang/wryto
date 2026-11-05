@@ -10,6 +10,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Pencil,
+  Quote,
   Share2,
   Trash2,
   UserX,
@@ -296,6 +297,14 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
               >
                 {post.time}
               </Link>
+              {post.readTime && (
+                <>
+                  <span className="text-muted-foreground/60 text-xs">·</span>
+                  <span className="text-[11px] font-sans text-muted-foreground/80 shrink-0">
+                    {post.readTime}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Top Right Actions */}
@@ -341,6 +350,23 @@ export function PostCard({ post, full = false }: { post: Post; full?: boolean })
                   >
                     <Share2 className="size-3.5 text-primary" />
                     <span>Copy Link</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const quoteText = `"${post.body.slice(0, 240)}" — ${post.author.name} (@${post.author.handle}) on Wryto`;
+                      try {
+                        await navigator.clipboard.writeText(quoteText);
+                        toast.success("Quote copied to clipboard!");
+                      } catch {
+                        toast.error("Could not copy quote");
+                      }
+                    }}
+                    className="cursor-pointer gap-2 text-xs rounded-xl px-2.5 py-2"
+                  >
+                    <Quote className="size-3.5 text-primary" />
+                    <span>Copy Quote</span>
                   </DropdownMenuItem>
                   {!isMine && (
                     <>
