@@ -52,6 +52,8 @@ export function ReportModal({
       await supabase.from("reports").insert({
         reporter_id: user?.id ?? null,
         post_id: postId,
+        target_id: postId,
+        target_type: "post",
         reason,
         details: details.trim() || null,
         created_at: new Date().toISOString(),

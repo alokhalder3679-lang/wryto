@@ -50,7 +50,8 @@ export const Route = createFileRoute("/profile/$handle")({
   head: ({ params, loaderData }) => {
     const m = loaderData?.meta;
     const url = `https://wryto-nine.vercel.app/profile/${params.handle}`;
-    const title = m ? `${m.display_name} (@${m.handle}) — Wryto` : "Writer Profile — Wryto";
+    const writerName = (m?.display_name || m?.handle || "Writer").trim();
+    const title = m ? `${writerName} (@${m.handle}) — Wryto` : "Writer Profile — Wryto";
     const description =
       m?.bio?.slice(0, 155) || "Read the latest thoughts and stories from this creator on Wryto.";
     return {
