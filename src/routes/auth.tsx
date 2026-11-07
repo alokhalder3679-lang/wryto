@@ -9,6 +9,16 @@ import { useInkline } from "@/lib/inkline-context";
 import { setRememberMe } from "@/lib/remember-me";
 import { EMAIL_RE, passwordProblems } from "@/lib/password-rules";
 
+function sanitizeNextPath(target?: string | null): string {
+  if (!target || typeof target !== "string") return "/feed";
+  const trimmed = target.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.startsWith("/\\")) {
+    return "/feed";
+  }
+  if (/[\r\n\t]/.test(trimmed)) return "/feed";
+  return trimmed;
+}
+
 export const Route = createFileRoute("/auth")({
   staticData: { sitemap: false },
   head: () => ({
@@ -23,7 +33,16 @@ export const Route = createFileRoute("/auth")({
   }),
   validateSearch: (s: Record<string, unknown>): { next?: string } => {
     const n = s["next"];
-    return typeof n === "string" && n.startsWith("/") && !n.startsWith("//") ? { next: n } : {};
+    if (
+      typeof n === "string" &&
+      n.startsWith("/") &&
+      !n.startsWith("//") &&
+      !n.startsWith("/\\") &&
+      !/[\r\n\t]/.test(n)
+    ) {
+      return { next: n };
+    }
+    return {};
   },
   errorComponent: AuthErrorComponent,
   component: AuthPage,
@@ -66,9 +85,8 @@ function AuthPage() {
   const [cooldown, setCooldown] = useState(0);
 
   const goNext = (dest?: string) => {
-    const to = dest ?? next;
-    if (to) window.location.href = to;
-    else void navigate({ to: "/feed", replace: true });
+    const safeTarget = sanitizeNextPath(dest ?? next);
+    void navigate({ to: safeTarget as any, replace: true });
   };
 
   useEffect(() => {
@@ -294,7 +312,7 @@ function AuthPage() {
     setInfo(null);
     setOauthBusy(true);
     try {
-      const redirectUri = `${window.location.origin}${next || "/feed"}`;
+      const redirectUri = `${window.location.origin}${sanitizeNextPath(next)}`;
       const { error: e } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
