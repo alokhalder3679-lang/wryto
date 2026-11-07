@@ -95,7 +95,13 @@ export const Route = createFileRoute("/post/$id")({
   component: PostDetailPage,
 });
 
-function PostErrorComponent() {
+function PostErrorComponent({ error }: { error?: unknown }) {
+  useEffect(() => {
+    if (error) {
+      console.error("[Wryto Post Route Error]:", error);
+    }
+  }, [error]);
+
   return (
     <AppShell title="Post">
       <div className="mx-auto max-w-lg px-6 py-20 text-center space-y-4">
@@ -421,7 +427,10 @@ function PostDetailPage() {
         {/* Post Body Content */}
         <div
           className={cn(
-            "font-sans text-base sm:text-lg leading-relaxed text-foreground whitespace-pre-line break-words",
+            readingFont === "serif"
+              ? "font-serif text-base sm:text-lg leading-relaxed"
+              : "font-sans text-base sm:text-lg leading-relaxed",
+            "text-foreground whitespace-pre-line break-words",
             isPoetry && "font-serif italic text-lg sm:text-xl leading-loose",
           )}
         >

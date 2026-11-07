@@ -52,7 +52,13 @@ export const Route = createFileRoute("/create")({
   component: CreatePage,
 });
 
-function CreateErrorComponent() {
+function CreateErrorComponent({ error }: { error?: unknown }) {
+  useEffect(() => {
+    if (error) {
+      console.error("[Wryto Create Route Error]:", error);
+    }
+  }, [error]);
+
   return (
     <AppShell title="Create">
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">

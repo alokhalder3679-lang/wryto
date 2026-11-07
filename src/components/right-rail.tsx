@@ -76,7 +76,7 @@ export function RightRail({ className }: { className?: string }) {
   return (
     <aside className={cn("hidden xl:flex flex-col w-80 shrink-0 gap-4 py-4 pr-4 pl-3 select-none", className)}>
       {/* ── Sticky Search Field (Opaque Backdrop to Prevent Content Collisions) ── */}
-      <div className="sticky top-0 z-20 -mt-4 pt-4 pb-1.5 bg-background/95 backdrop-blur-md">
+      <div className="sticky top-0 z-20 -mt-4 pt-4 pb-2 bg-background/98 backdrop-blur-md border-b border-border/40 shadow-xs">
         <form onSubmit={handleSearchSubmit} className="relative group">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/75 group-focus-within:text-foreground transition-colors pointer-events-none" />
           <input
