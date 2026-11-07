@@ -71,7 +71,13 @@ export const Route = createFileRoute("/profile/$handle")({
   component: ProfilePage,
 });
 
-function ProfileErrorComponent() {
+function ProfileErrorComponent({ error }: { error?: unknown }) {
+  useEffect(() => {
+    if (error) {
+      console.error("[Wryto Profile Route Error]:", error);
+    }
+  }, [error]);
+
   return (
     <AppShell title="Profile">
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">

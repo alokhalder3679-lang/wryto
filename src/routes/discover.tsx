@@ -37,7 +37,13 @@ export const Route = createFileRoute("/discover")({
   component: DiscoverPage,
 });
 
-function DiscoverErrorComponent() {
+function DiscoverErrorComponent({ error }: { error?: unknown }) {
+  useEffect(() => {
+    if (error) {
+      console.error("[Wryto Discover Route Error]:", error);
+    }
+  }, [error]);
+
   return (
     <AppShell title="Explore">
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 my-auto min-h-[400px]">

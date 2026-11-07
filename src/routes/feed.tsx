@@ -34,7 +34,13 @@ export const Route = createFileRoute("/feed")({
   component: FeedPage,
 });
 
-function FeedErrorComponent() {
+function FeedErrorComponent({ error }: { error?: unknown }) {
+  useEffect(() => {
+    if (error) {
+      console.error("[Wryto Feed Route Error]:", error);
+    }
+  }, [error]);
+
   return (
     <AppShell>
       <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
