@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   POST_SELECT,
+  initialsOf,
   relativeTime,
   toPost,
   toWriter,
@@ -261,7 +262,8 @@ function PostDetailPage() {
     });
     setCommenting(false);
     if (error) {
-      toast.error("Couldn't add reply. Please try again.");
+      console.error("[Wryto Comment Error]:", error);
+      toast.error(error.message || "Couldn't add reply. Please try again.");
       return;
     }
     setCommentText("");
@@ -591,15 +593,15 @@ function PostDetailPage() {
             <div key={comment.id} className="p-4 sm:p-5 flex gap-3 hover:bg-muted/15 transition-colors">
               <Link
                 to="/profile/$handle"
-                params={{ handle: comment.author.handle }}
+                params={{ handle: comment.author?.handle || "writer" }}
                 className="shrink-0 block mt-0.5"
               >
                 <Avatar className="size-9 ring-1 ring-border">
-                  {getAvatarUrl(comment.author.avatarUrl) && (
-                    <AvatarImage src={getAvatarUrl(comment.author.avatarUrl)!} alt={comment.author.name} />
+                  {getAvatarUrl(comment.author?.avatarUrl) && (
+                    <AvatarImage src={getAvatarUrl(comment.author?.avatarUrl)!} alt={comment.author?.name || "Writer"} />
                   )}
                   <AvatarFallback className="text-xs font-bold font-sans">
-                    {comment.author.initials}
+                    {comment.author?.initials || "W"}
                   </AvatarFallback>
                 </Avatar>
               </Link>
@@ -608,19 +610,19 @@ function PostDetailPage() {
                   <div className="flex items-center gap-1.5 min-w-0 truncate">
                     <Link
                       to="/profile/$handle"
-                      params={{ handle: comment.author.handle }}
+                      params={{ handle: comment.author?.handle || "writer" }}
                       className="font-sans text-xs font-bold text-foreground hover:underline truncate"
                     >
-                      {comment.author.name}
+                      {comment.author?.name || "Writer"}
                     </Link>
                     <span className="font-sans text-[11px] text-muted-foreground truncate">
-                      @{comment.author.handle}
+                      @{comment.author?.handle || "writer"}
                     </span>
                     <span className="text-muted-foreground/60 text-xs">·</span>
                     <span className="font-sans text-[11px] text-muted-foreground">{comment.time}</span>
                   </div>
 
-                  {user && (user.id === comment.author.id || user.id === post.author.id) && (
+                  {user && (user.id === comment.author?.id || user.id === post.author?.id) && (
                     <button
                       type="button"
                       onClick={() => void removeComment(comment.id)}
@@ -651,9 +653,9 @@ function PostDetailPage() {
         open={blockOpen}
         onOpenChange={setBlockOpen}
         targetUser={{
-          id: post.author.id,
-          handle: post.author.handle,
-          name: post.author.name,
+          id: post.author?.id || "",
+          handle: post.author?.handle || "",
+          name: post.author?.name || "Writer",
         }}
       />
     </AppShell>
